@@ -3681,7 +3681,7 @@ exit:
 /* BEGIN_CASE depends_on:MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 void ssl_tls1_3_hkdf_expand_label( int hash_alg,
                                    data_t *secret,
-                                   int label_idx,
+                                   data_t *label,
                                    data_t *ctx,
                                    int desired_length,
                                    data_t *expected )
@@ -3707,12 +3707,11 @@ MBEDTLS_SSL_TLS1_3_LABEL_LIST
     TEST_ASSERT( mbedtls_ssl_tls1_3_hkdf_expand_label(
                       (mbedtls_md_type_t) hash_alg,
                       secret->x, secret->len,
-                      lbl, lbl_len,
+                      label->x, label->len,
                       ctx->x, ctx->len,
                       dst, desired_length ) == 0 );
 
-    ASSERT_COMPARE( dst, (size_t) desired_length,
-                    expected->x, (size_t) expected->len );
+    TEST_ASSERT( memcmp( dst, expected->x, desired_length ) == 0 );
 }
 /* END_CASE */
 
@@ -3819,6 +3818,21 @@ void ssl_tls1_3_key_evolution( int hash_alg,
 
     ASSERT_COMPARE( secret_new, (size_t) expected->len,
                     expected->x, (size_t) expected->len );
+    TEST_ASSERT( keys.keyLen == (size_t) desired_key_len );
+    TEST_ASSERT( keys.ivLen  == (size_t) desired_iv_len  );
+
+    TEST_ASSERT( memcmp( keys.clientWriteKey,
+                         expected_client_write_key->x,
+                         desired_key_len ) == 0 );
+    TEST_ASSERT( memcmp( keys.serverWriteKey,
+                         expected_server_write_key->x,
+                         desired_key_len ) == 0 );
+    TEST_ASSERT( memcmp( keys.clientWriteIV,
+                         expected_client_write_iv->x,
+                         desired_iv_len ) == 0 );
+    TEST_ASSERT( memcmp( keys.serverWriteIV,
+                         expected_server_write_iv->x,
+                         desired_iv_len ) == 0 );
 }
 /* END_CASE */
 
