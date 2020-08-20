@@ -400,6 +400,7 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
                                      const unsigned char *random, size_t rlen,
                                      unsigned char *dstbuf, size_t dlen );
 
+<<<<<<< HEAD
 /* cipher.h exports the maximum IV, key and block length from
  * all ciphers enabled in the config, regardless of whether those
  * ciphers are actually usable in SSL/TLS. Notably, XTS is enabled
@@ -420,6 +421,7 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
 #define MBEDTLS_SSL_MAX_IV_LENGTH    16
 #define MBEDTLS_SSL_MAX_KEY_LENGTH   32
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 /**
  * \brief   The data structure holding the cryptographic material (key and IV)
  *          used for record protection in TLS 1.3.
@@ -427,20 +429,38 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
 struct mbedtls_ssl_key_set
 {
     /*! The key for client->server records. */
-    unsigned char client_write_key[ MBEDTLS_SSL_MAX_KEY_LENGTH ];
+    unsigned char clientWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
     /*! The key for server->client records. */
-    unsigned char server_write_key[ MBEDTLS_SSL_MAX_KEY_LENGTH ];
+    unsigned char serverWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
     /*! The IV  for client->server records. */
-    unsigned char client_write_iv[ MBEDTLS_SSL_MAX_IV_LENGTH ];
+    unsigned char clientWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
     /*! The IV  for server->client records. */
-    unsigned char server_write_iv[ MBEDTLS_SSL_MAX_IV_LENGTH ];
+    unsigned char serverWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
 
-    size_t key_len; /*!< The length of client_write_key and
-                     *   server_write_key, in Bytes. */
-    size_t iv_len;  /*!< The length of client_write_iv and
-                     *   server_write_iv, in Bytes. */
+    size_t keyLen; /*!< The length of clientWriteKey and
+                    *   serverWriteKey, in Bytes. */
+    size_t ivLen;  /*!< The length of clientWriteIV and
+                    *   serverWriteIV, in Bytes. */
+
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
+    int epoch;
+    unsigned char iv[ MBEDTLS_MAX_IV_LENGTH ];
+
+    /* The [sender]_sn_key is indirectly used to
+     * encrypt the sequence number in the record layer.
+     *
+     * The client_sn_key is used to encrypt the
+     * sequence number for outgoing transmission.
+     * server_sn_key is used for incoming payloads.
+     */
+    unsigned char server_sn_key[ MBEDTLS_MAX_KEY_LENGTH ];
+    unsigned char client_sn_key[ MBEDTLS_MAX_KEY_LENGTH ];
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
+
 };
 typedef struct mbedtls_ssl_key_set mbedtls_ssl_key_set;
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
 
 /*
  * This structure contains the parameters only needed during handshake.
