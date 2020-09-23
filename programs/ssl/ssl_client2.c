@@ -621,14 +621,10 @@ struct options
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
     const char *mki;            /* The dtls mki value to use                */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     const char *named_groups_string;           /* list of named groups      */
     const char *key_share_named_groups_string; /* list of named groups      */
     int key_exchange_modes;     /* supported key exchange modes             */
-#if defined(MBEDTLS_ZERO_RTT)
     int early_data;             /* support for early data                   */
-#endif /* MBEDTLS_ZERO_RTT */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 } opt;
 
 int query_config( const char *config );
@@ -1286,15 +1282,14 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-
-#if defined(MBEDTLS_ECP_C)
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
+    defined(MBEDTLS_ECP_C)
     /* list of named groups */
     mbedtls_ecp_group_id named_groups_list[MAX_NAMED_GROUPS];
     /* list of named groups for key share*/
     mbedtls_ecp_group_id key_share_named_groups_list[MAX_NAMED_GROUPS];
     char *start;
-#endif /* MBEDTLS_ECP_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_ZERO_RTT)
     char early_data[] = "early data test";
@@ -1304,9 +1299,7 @@ int main( int argc, char *argv[] )
     mbedtls_ssl_ticket ticket;
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
-#else
     mbedtls_ssl_session saved_session;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
 
     unsigned char *session_data = NULL;
     size_t session_data_len = 0;
@@ -1370,9 +1363,9 @@ int main( int argc, char *argv[] )
     memset( (void *) key_share_named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof( key_share_named_groups_list ) );
 #endif /* MBEDTLS_ECP_C */
 
-#else
-    memset( &saved_session, 0, sizeof( mbedtls_ssl_session ) );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+    memset( &saved_session, 0, sizeof( mbedtls_ssl_session ) );
 
     mbedtls_ctr_drbg_init( &ctr_drbg );
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
@@ -1442,12 +1435,8 @@ int main( int argc, char *argv[] )
     opt.key_opaque          = DFL_KEY_OPAQUE;
     opt.key_pwd             = DFL_KEY_PWD;
     opt.psk                 = DFL_PSK;
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     opt.key_exchange_modes = DFL_KEY_EXCHANGE_MODES;
-#if defined(MBEDTLS_ZERO_RTT)
     opt.early_data          = DFL_EARLY_DATA;
-#endif /* MBEDTLS_ZERO_RTT */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     opt.psk_opaque          = DFL_PSK_OPAQUE;
 #endif
@@ -3110,7 +3099,11 @@ int main( int argc, char *argv[] )
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 #endif
-#if !defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+    /* TODO: Currently, this is incompatible with TLS 1.3. We might want to
+     *       fail if the user asked for TLS 1.3 on the command line and also
+     *       requested a reconnect. Since none of the ssl-opt.sh tests actually
+     *       do this, though, we can leave the code for now. */
     if( opt.reconnect != 0 )
     {
         mbedtls_printf("  . Saving session for reuse..." );
@@ -3166,7 +3159,6 @@ int main( int argc, char *argv[] )
                             (unsigned) session_data_len );
         }
     }
-#endif /* !MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     /*
