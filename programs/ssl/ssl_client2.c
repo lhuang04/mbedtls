@@ -622,8 +622,8 @@ struct options
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
     const char *mki;            /* The dtls mki value to use                */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-    const char *named_groups_string;    /* list of named groups             */
-    const char *key_share_named_groups_string;    /* list of named groups   */
+    const char *named_groups_string;           /* list of named groups      */
+    const char *key_share_named_groups_string; /* list of named groups      */
     int key_exchange_modes;     /* supported key exchange modes             */
 #if defined(MBEDTLS_ZERO_RTT)
     int early_data;             /* support for early data                   */
