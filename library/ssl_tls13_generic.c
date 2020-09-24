@@ -1253,7 +1253,7 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char h
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" );
+        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" ) - 1;
         context_string = mbedtls_calloc( context_string_len,1 );
 
         if( context_string == NULL )
@@ -1265,7 +1265,7 @@ static int ssl_calc_verify_tls_sha256( mbedtls_ssl_context *ssl, unsigned char h
     }
     else /* from == MBEDTLS_SSL_IS_SERVER */
     {
-        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" );
+        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" ) - 1;
         context_string = mbedtls_calloc( context_string_len,1 );
         if( context_string == NULL )
         {
@@ -1335,7 +1335,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
 
     if( from == MBEDTLS_SSL_IS_CLIENT )
     {
-        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" );
+        context_string_len = sizeof( "TLS 1.3, client CertificateVerify" ) - 1;
         context_string = mbedtls_calloc( context_string_len, 1 );
 
         if( context_string == NULL )
@@ -1347,7 +1347,7 @@ static int ssl_calc_verify_tls_sha384( mbedtls_ssl_context *ssl, unsigned char h
     }
     else
     { /* from == MBEDTLS_SSL_IS_SERVER */
-        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" );
+        context_string_len = sizeof( "TLS 1.3, server CertificateVerify" ) - 1;
         context_string = mbedtls_calloc( context_string_len, 1 );
         if( context_string == NULL )
         {
