@@ -4540,27 +4540,13 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             /* ----- WRITE ENCRYPTED EXTENSIONS ----*/
 
         case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
-
             ret = ssl_encrypted_extensions_process( ssl );
-
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_encrypted_extensions_process", ret );
-                return( ret );
-            }
-
             break;
 
             /* ----- WRITE CERTIFICATE REQUEST ----*/
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
             ret = ssl_certificate_request_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "ssl_certificate_request_process", ret );
-                return( ret );
-            }
-
             break;
 
             /* ----- WRITE SERVER CERTIFICATE ----*/
@@ -4628,13 +4614,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_ZERO_RTT)
 
         case MBEDTLS_SSL_EARLY_DATA:
-
             ret = ssl_read_end_of_early_data_process( ssl );
-            if( ret != 0 )
-            {
-                MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_parse_end_of_early_data", ret );
-                return ( ret );
-            }
             break;
 #endif /* MBEDTLS_ZERO_RTT */
 
@@ -4745,6 +4725,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
+    mbedtls_ssl_handle_pending_alert( ssl );
     return( ret );
 }
 
