@@ -556,7 +556,7 @@ int ssl_parse_cid_ext( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 
  /* Main entry point; orchestrates the other functions */
-int ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
 
 #define SSL_WRITE_CCS_NEEDED     0
 #define SSL_WRITE_CCS_SKIP       1
@@ -572,7 +572,7 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-int ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 {
     int ret;
 
@@ -812,7 +812,7 @@ int mbedtls_ssl_write_ack( mbedtls_ssl_context *ssl )
 
 
 /*
- * ssl_write_signature_algorithms_ext( )
+ * mbedtls_ssl_write_signature_algorithms_ext( )
  *
  * enum {
  *    ....
@@ -830,7 +830,7 @@ int mbedtls_ssl_write_ack( mbedtls_ssl_context *ssl )
  */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
                                         unsigned char* buf,
                                         unsigned char* end,
                                         size_t* olen )
@@ -887,7 +887,7 @@ int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     return( 0 );
 }
 
-int ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
+int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
                                         const unsigned char *buf,
                                         size_t len )
 {
@@ -1208,7 +1208,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     return( 0 );
 }
 
-int incrementSequenceNumber( unsigned char *sequenceNumber, unsigned char *nonce, size_t ivlen ) {
+int mbedtls_increment_sequence_number( unsigned char *sequenceNumber, unsigned char *nonce, size_t ivlen ) {
 
     if( ivlen == 0 ) return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
@@ -1632,7 +1632,7 @@ int mbedtls_ssl_tls1_3_derive_master_secret( mbedtls_ssl_context *ssl ) {
  */
 
 /* Main entry point: orchestrates the other functions. */
-int ssl_certificate_verify_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl );
 
 /* Coordinate: Check whether a certificate verify message should be sent.
  * Returns a negative value on failure, and otherwise
@@ -1655,7 +1655,7 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-int ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate verify" ) );
@@ -1885,7 +1885,7 @@ static int ssl_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
  */
 
 /* Main entry point; orchestrates the other functions */
-int ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl );
 
 /* Coordinate: Check whether a certificate verify message is expected.
  * Returns a negative value on failure, and otherwise
@@ -1918,7 +1918,7 @@ static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-int ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 {
     int ret;
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
@@ -2150,7 +2150,7 @@ static int ssl_read_certificate_verify_postprocess( mbedtls_ssl_context* ssl )
  */
 
 /* Main state-handling entry point; orchestrates the other functions. */
-int ssl_write_certificate_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl );
 
 /* Check if a certificate should be written, and if yes,
  * if it is available.
@@ -2179,7 +2179,7 @@ static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-int ssl_write_certificate_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
 {
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write certificate" ) );
@@ -2436,7 +2436,7 @@ static int ssl_write_certificate_postprocess( mbedtls_ssl_context* ssl )
  */
 
 /* Main state-handling entry point; orchestrates the other functions. */
-int ssl_read_certificate_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl );
 
 /* Coordination: Check if a certificate is expected.
  * Returns a negative error code on failure, and otherwise
@@ -2465,7 +2465,7 @@ static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl );
  * Implementation
  */
 
-int ssl_read_certificate_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
 {
     int ret;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse certificate" ) );
@@ -3737,7 +3737,7 @@ void mbedtls_ssl_handshake_wrapup( mbedtls_ssl_context *ssl )
  */
 
 /* Main entry point: orchestrates the other functions */
-int ssl_finished_out_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl );
 
 static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl );
 static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
@@ -3752,7 +3752,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl );
  */
 
 
-int ssl_finished_out_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
 {
     int ret;
     mbedtls_ssl_key_set traffic_keys;
@@ -3983,7 +3983,7 @@ static int ssl_finished_out_write( mbedtls_ssl_context* ssl,
  */
 
 /* Main entry point: orchestrates the other functions */
-int ssl_finished_in_process( mbedtls_ssl_context* ssl );
+int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl );
 
 static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl );
 static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl );
@@ -3995,7 +3995,7 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
  * Implementation
  */
 
-int ssl_finished_in_process( mbedtls_ssl_context* ssl )
+int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse finished" ) );
@@ -4155,7 +4155,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
-/* The ssl_parse_new_session_ticket( ) function is used by the
+/* The mbedtls_ssl_parse_new_session_ticket( ) function is used by the
  * client to parse the NewSessionTicket message, which contains
  * the ticket and meta-data provided by the server in a post-
  * handshake message.
@@ -4163,7 +4163,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
  * The code is located in ssl_tls.c since the function is called
  * mbedtls_ssl_read. It is a post-handshake message.
  */
-int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
+int mbedtls_ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
 {
     int ret;
     uint32_t lifetime, ticket_age_add;
@@ -4298,7 +4298,7 @@ int ssl_parse_new_session_ticket( mbedtls_ssl_context *ssl )
 
     if( suite_info == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "suite_info == NULL, ssl_parse_new_session_ticket failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "suite_info == NULL, mbedtls_ssl_parse_new_session_ticket failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -4563,10 +4563,10 @@ void mbedtls_ssl_conf_client_ticket_disable( mbedtls_ssl_context *ssl )
  * } EarlyDataIndication;
  */
 #if defined(MBEDTLS_ZERO_RTT)
-int ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
-                              unsigned char *buf,
-                              size_t buflen,
-                              size_t *olen )
+int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
+                                      unsigned char *buf,
+                                      size_t buflen,
+                                      size_t *olen )
 {
     unsigned char *p = buf;
     const unsigned char* end = buf + buflen;
