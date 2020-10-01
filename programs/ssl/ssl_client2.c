@@ -1425,7 +1425,6 @@ int main( int argc, char *argv[] )
     size_t context_buf_len;
 #endif
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_2)
     unsigned char eap_tls_keymaterial[16];
