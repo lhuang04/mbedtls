@@ -400,7 +400,6 @@ typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
                                      const unsigned char *random, size_t rlen,
                                      unsigned char *dstbuf, size_t dlen );
 
-<<<<<<< HEAD
 /* cipher.h exports the maximum IV, key and block length from
  * all ciphers enabled in the config, regardless of whether those
  * ciphers are actually usable in SSL/TLS. Notably, XTS is enabled
@@ -493,6 +492,9 @@ struct mbedtls_ssl_handshake_params
      */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
     int signature_scheme;                        /*!<  Signature scheme  */
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_SRV_C)
+    int *received_signature_schemes_list;              /*!<  Received signature algorithms */
+#endif /* MBEDTLS_X509_CRT_PARSE_C && MBEDTLS_SSL_SRV_C */
     mbedtls_ecp_curve_info server_preferred_curve; /*!<  Preferred curve requested by server (obtained in HelloRetryRequest  */
 #if defined(MBEDTLS_SSL_CLI_C)
     int hello_retry_requests_received; /*!<  Number of Hello Retry Request messages received from the server.  */
