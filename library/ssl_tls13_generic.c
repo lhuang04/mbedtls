@@ -3436,6 +3436,7 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
         ssl->session_in = ssl->session_negotiate;
         transform = ssl->transform_negotiate;
     }
+    else
 #endif
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
@@ -3445,7 +3446,12 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
         ssl->session_out = ssl->session_negotiate;
         transform = ssl->transform_negotiate;
     }
+    else
 #endif
+    {
+        /* should never happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
 
     ciphersuite_info = transform->ciphersuite_info;
     if( ciphersuite_info == NULL )
