@@ -3308,10 +3308,9 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
 
         }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
-
     }
+    else
 #endif /* MBEDTLS_SSL_SRV_C */
-
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
@@ -3335,7 +3334,12 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
         }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     }
+    else
 #endif /* MBEDTLS_SSL_CLI_C */
+    {
+        /* should not happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
 
     if( ( ret = mbedtls_cipher_setkey( &transform->cipher_ctx_enc, key1,
                                        cipher_info->key_bitlen,
