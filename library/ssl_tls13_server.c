@@ -1457,11 +1457,6 @@ static int ssl_write_supported_version_ext( mbedtls_ssl_context *ssl,
     unsigned char *p = buf;
     *olen = 0;
 
-    if( ssl->handshake->extensions_present & SUPPORTED_VERSION_EXTENSION )
-    {
-        return( 0 );
-    }
-
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding supported version extension" ) );
 
     if( end < p || (size_t)( end - p ) < 6 )
@@ -3781,6 +3776,20 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     /* 2 bytes for extension type, 2 bytes for extension length field and 2 bytes for cookie length */
     total_ext_len += ext_length + 6;
 #endif /* MBEDTLS_SSL_COOKIE_C */
+
+    /* Add supported_version extension */
+    if( ( ret = ssl_write_supported_version_ext( ssl,
+                                                 p,
+                                                 ssl->out_buf + MBEDTLS_SSL_OUT_BUFFER_LEN,
+                                                 (size_t *) &ext_length )
+                                                ) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_write_supported_version_ext", ret );
+        return( ret );
+    }
+
+    total_ext_len += ext_length;
+    p += ext_length;
 
 #if defined(MBEDTLS_ECDH_C)
 
