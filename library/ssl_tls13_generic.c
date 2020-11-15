@@ -627,6 +627,7 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
 {
     int ret = SSL_WRITE_CCS_NEEDED;
 
+#if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         if( ssl->state == MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO )
@@ -640,7 +641,9 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
                 ret = SSL_WRITE_CCS_SKIP;
         }
     }
+#endif /* MBEDTLS_SSL_SRV_C */
 
+#if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         if( ssl->state == MBEDTLS_SSL_CLIENT_CCS_BEFORE_FINISHED )
@@ -651,6 +654,7 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
                 ret = SSL_WRITE_CCS_SKIP;
         }
     }
+#endif /* MBEDTLS_SSL_CLI_C */
 
     return( ret );
 }
@@ -676,6 +680,7 @@ static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
 static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
 {
 
+#if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         switch( ssl->state )
@@ -695,7 +700,10 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
     }
-    else /* endpoint is client */
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
         switch( ssl->state )
         {
@@ -713,6 +721,7 @@ static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
                 return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
     }
+#endif /* MBEDTLS_SSL_CLI_C */
 
     return( 0 );
 }
@@ -4066,9 +4075,10 @@ cleanup:
 static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 {
     int ret;
-    mbedtls_ssl_key_set* traffic_keys=ssl->handshake->state_local.finished_out.traffic_keys;
 
 #if defined(MBEDTLS_SSL_CLI_C)
+    mbedtls_ssl_key_set* traffic_keys=ssl->handshake->state_local.finished_out.traffic_keys;
+
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
 #if defined(MBEDTLS_ZERO_RTT)
@@ -4112,10 +4122,8 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
             return ( ret );
         }
-
     }
 #endif /* MBEDTLS_SSL_CLI_C */
-
 
     /*
      * Set the out_msg pointer to the correct location based on IV length
@@ -4125,12 +4133,15 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /* Compute transcript of handshake up to now. */
-
-    ret = ssl->handshake->calc_finished( ssl, ssl->handshake->state_local.finished_out.digest, ssl->conf->endpoint );
-
-    ssl->handshake->calc_finished( ssl,
+    ret = ssl->handshake->calc_finished( ssl,
                                    ssl->handshake->state_local.finished_out.digest,
                                    ssl->conf->endpoint );
+
+    if( ret != 0 )
+    {
+            MBEDTLS_SSL_DEBUG_RET( 1, "calc_finished failed", ret );
+        return( ret );
+    }
 
 #if defined(MBEDTLS_SSL_HW_RECORD_ACCEL)
     if( mbedtls_ssl_hw_record_activate != NULL )
@@ -4154,7 +4165,6 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
-    mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
 #if defined(MBEDTLS_SSL_SRV_C)
     const mbedtls_ssl_ciphersuite_t *suite_info =
         mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
@@ -4162,14 +4172,16 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SHA256_C)
     mbedtls_sha256_context sha256;
-#endif
+#endif /* MBEDTLS_SHA256_C */
 
 #if defined(MBEDTLS_SHA512_C)
     mbedtls_sha512_context sha512;
-#endif
+#endif /* MBEDTLS_SHA512_C */
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #if defined(MBEDTLS_SSL_CLI_C)
+    mbedtls_ssl_key_set* traffic_keys = ssl->handshake->state_local.finished_out.traffic_keys;
+
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
     {
 
@@ -4484,6 +4496,9 @@ static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 {
 	int ret = 0;
 
+#if defined(MBEDTLS_SSL_SRV_C)
+    (void) ssl;
+#endif /* MBEDTLS_SSL_SRV_C */
 #if defined(MBEDTLS_SSL_CLI_C)
     const mbedtls_ssl_ciphersuite_t *suite_info =
         mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
@@ -4625,7 +4640,7 @@ void mbedtls_ssl_conf_early_data( mbedtls_ssl_config *conf, int early_data, char
 #endif /* MBEDTLS_ZERO_RTT */
 
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
 
 /* The mbedtls_ssl_parse_new_session_ticket( ) function is used by the
  * client to parse the NewSessionTicket message, which contains
@@ -4825,8 +4840,7 @@ int mbedtls_ssl_conf_ticket_meta( mbedtls_ssl_config *conf,
 #endif /* MBEDTLS_HAVE_TIME */
     return( 0 );
 }
-
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
 void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
@@ -4869,6 +4883,7 @@ void mbedtls_ssl_del_client_ticket( mbedtls_ssl_ticket *ticket )
     mbedtls_platform_zeroize( ticket->key, sizeof( ticket->key ) );
 }
 
+#if defined(MBEDTLS_SSL_CLI_C)
 int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
                                     mbedtls_ssl_ticket *ticket )
 {
@@ -4941,7 +4956,9 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
+#endif /* MBEDTLS_SSL_CLI_C */
 
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
 int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_ticket *ticket )
 {
     const mbedtls_ssl_ciphersuite_t *cur;
@@ -5001,6 +5018,7 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
         return( 1 );
     }
 }
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
 
 void mbedtls_ssl_conf_client_ticket_enable( mbedtls_ssl_context *ssl )
 {
