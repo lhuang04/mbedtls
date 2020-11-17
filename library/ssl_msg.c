@@ -1986,6 +1986,8 @@ static int ssl_decompress_buf( mbedtls_ssl_context *ssl )
 }
 #endif /* MBEDTLS_ZLIB_SUPPORT */
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /*
  * Fill the input message buffer by appending data to it.
  * The amount of data already fetched is in ssl->in_left.
@@ -2214,6 +2216,8 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 /*
  * Flush any data not yet written
