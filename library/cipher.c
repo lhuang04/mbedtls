@@ -1340,11 +1340,7 @@ static int mbedtls_cipher_aead_encrypt( mbedtls_cipher_context_t *ctx,
     }
 #endif /* MBEDTLS_GCM_C */
 #if defined(MBEDTLS_CCM_C)
-    if( MBEDTLS_MODE_CCM == ctx->cipher_info->mode 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-        || ctx->cipher_info->mode == MBEDTLS_MODE_CCM_8
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-        )
+    if( MBEDTLS_MODE_CCM == ctx->cipher_info->mode )
     {
         *olen = ilen;
         return( mbedtls_ccm_encrypt_and_tag( ctx->cipher_ctx, ilen,
@@ -1432,11 +1428,7 @@ static int mbedtls_cipher_aead_decrypt( mbedtls_cipher_context_t *ctx,
     }
 #endif /* MBEDTLS_GCM_C */
 #if defined(MBEDTLS_CCM_C)
-    if( MBEDTLS_MODE_CCM == ctx->cipher_info->mode 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)        
-        || ctx->cipher_info->mode == MBEDTLS_MODE_CCM_8
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
-        )
+    if( MBEDTLS_MODE_CCM == ctx->cipher_info->mode )
     {
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
