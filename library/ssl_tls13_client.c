@@ -731,9 +731,9 @@ int mbedtls_ssl_create_binder( mbedtls_ssl_context *ssl, unsigned char *psk, siz
 
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-    if( hash_length == -1 )
+    if( hash_length == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, mbedtls_ssl_create_binder failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == 0, mbedtls_ssl_create_binder failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -1022,9 +1022,9 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 
         hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-        if( hash_len == -1 )
+        if( hash_len == 0 )
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, mbedtls_ssl_write_pre_shared_key_ext failed" ) );
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == 0, mbedtls_ssl_write_pre_shared_key_ext failed" ) );
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
@@ -1042,9 +1042,9 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
 #endif
         break;
     }
-    if( hash_len == -1 )
+    if( hash_len == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, mbedtls_ssl_write_pre_shared_key_ext failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == 0, mbedtls_ssl_write_pre_shared_key_ext failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -3806,9 +3806,9 @@ static int ssl_hrr_postprocess( mbedtls_ssl_context* ssl,
 
     hash_length = mbedtls_hash_size_for_ciphersuite( ssl->handshake->ciphersuite_info );
 
-    if( hash_length == -1 )
+    if( hash_length == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == 0, ssl_hrr_postprocess failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 

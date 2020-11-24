@@ -2344,7 +2344,7 @@ int mbedtls_ssl_get_ciphersuite_id( const char *ciphersuite_name )
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
 unsigned int mbedtls_hash_size_for_ciphersuite(const mbedtls_ssl_ciphersuite_t* ciphersuite)
 {
-    /* We assume that the input parameter, ciphersuite, is not NULL. */
+    /* We assume that the input parameter, ciphersuite, is NOT NULL. */
     switch( ciphersuite->mac )
     {
     case MBEDTLS_MD_SHA256:

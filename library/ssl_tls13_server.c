@@ -516,8 +516,12 @@ int mbedtls_ssl_parse_new_session_ticket_server(
         return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
     } else memcpy( ticket_buffer, buf, len );
 
-    if( ( ret = ssl->conf->f_ticket_parse( ssl->conf->p_ticket, ticket,
-                                         ticket_buffer, len ) ) != 0 )
+    ssl->session_negotiate->minor_ver = ssl->minor_ver;
+    ssl->session_negotiate->ticket_t = ticket;
+
+    if( ( ret = ssl->conf->f_ticket_parse( ssl->conf->p_ticket,
+                                           ssl->session_negotiate,
+                                           ticket_buffer, len ) ) != 0 )
     {
         mbedtls_platform_zeroize( &ticket, sizeof( mbedtls_ssl_ticket ) );
         mbedtls_free( ticket_buffer );
@@ -569,7 +573,7 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
                             unsigned char *computed_binder )
 {
     int ret = 0;
-    int hash_length;
+    unsigned int hash_size;
 
     /* TBD: With dynamic memory allocations or a different hash function API
      * we could make a more efficient memory allocation.
@@ -591,11 +595,11 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     mbedtls_sha512_context sha512;
 #endif /* MBEDTLS_SHA512_C */
 
-    hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
+    hash_size = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-    if( hash_length == -1 )
+    if( hash_size == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, ssl_calc_binder failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == 0, ssl_calc_binder failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -604,8 +608,8 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
       Compute Early Secret with HKDF-Extract( 0, PSK )
 
     */
-    memset( salt, 0x0, hash_length );
-    ret = mbedtls_hkdf_extract( md, salt, hash_length, psk, psk_len, ssl->handshake->early_secret );
+    memset( salt, 0x0, hash_size );
+    ret = mbedtls_hkdf_extract( md, salt, hash_size, psk, psk_len, ssl->handshake->early_secret );
 
     if( ret != 0 )
     {
@@ -614,9 +618,9 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Extract -- early_secret" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Salt", salt, hash_size );
     MBEDTLS_SSL_DEBUG_BUF( 5, "Input", psk, psk_len );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Output", ssl->handshake->early_secret, hash_size );
 
     /*
 
@@ -657,20 +661,20 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     if( ( ssl->handshake->resume == 1 ) || ( ssl->conf->resumption_mode == 1 ) )
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
-                            ssl->handshake->early_secret, hash_length,
+                            ssl->handshake->early_secret, hash_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                            binder_key, hash_length );
+                            binder_key, hash_size );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'res binder'" ) );
     }
     else
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
     {
         ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
-                            ssl->handshake->early_secret, hash_length,
+                            ssl->handshake->early_secret, hash_size,
                             MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( ext_binder ),
                             NULL, 0, MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED,
-                            binder_key, hash_length );
+                            binder_key, hash_size );
         MBEDTLS_SSL_DEBUG_MSG( 5, ( "Derive Early Secret with 'ext binder'" ) );
     }
 
@@ -758,10 +762,10 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
      */
 
     ret = mbedtls_ssl_tls1_3_hkdf_expand_label( suite_info->mac,
-                          binder_key, hash_length,
+                          binder_key, hash_size,
                           MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( finished ),
                           NULL, 0,
-                          finished_key, hash_length );
+                          finished_key, hash_size );
 
     if( ret != 0 )
     {
@@ -769,10 +773,10 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
         goto exit;
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "finished_key", finished_key, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "finished_key", finished_key, hash_size );
 
     /* compute mac and write it into the buffer */
-    ret = mbedtls_md_hmac( md, finished_key, hash_length, padbuf, hash_length, computed_binder );
+    ret = mbedtls_md_hmac( md, finished_key, hash_size, padbuf, hash_size, computed_binder );
 
     if( ret != 0 )
     {
@@ -781,9 +785,9 @@ static int ssl_calc_binder( mbedtls_ssl_context *ssl, unsigned char *psk,
     }
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "verify_data of psk binder" ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Input", padbuf, hash_length );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Key", finished_key, hash_length );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Output", computed_binder, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Input", padbuf, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Key", finished_key, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Output", computed_binder, hash_size );
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
@@ -805,7 +809,7 @@ exit:
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 	}
 
-    mbedtls_platform_zeroize( finished_key, hash_length );
+    mbedtls_platform_zeroize( finished_key, hash_size );
 
     return( ret );
 }
@@ -1516,10 +1520,12 @@ static int ssl_parse_supported_versions_ext( mbedtls_ssl_context *ssl,
         mbedtls_ssl_read_version( &major_ver, &minor_ver, ssl->conf->transport, buf );
 
         /* In this implementation we only support TLS 1.3 and DTLS 1.3. */
-        if( major_ver == ( int )0x03 &&
-            minor_ver == ( int )0x04 )
+        if( major_ver == MBEDTLS_SSL_MAJOR_VERSION_3 &&
+            minor_ver == MBEDTLS_SSL_MINOR_VERSION_4 )
         {
             /* we found a supported version */
+            ssl->major_ver = MBEDTLS_SSL_MAJOR_VERSION_3;
+            ssl->minor_ver = MBEDTLS_SSL_MINOR_VERSION_4;
             goto found_version;
         } else
         {
@@ -1658,6 +1664,8 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_DEBUG_MSG( 3, ( "Use of tickets disabled." ) );
         return ( 0 );
     }
+    
+    ssl->session->ticket_t = &ticket;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write NewSessionTicket msg" ) );
 
@@ -1680,7 +1688,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     suite_info = ( mbedtls_ssl_ciphersuite_t * ) ssl->handshake->ciphersuite_info;
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-    if( hash_length == -1 )
+    if( hash_length == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, ssl_write_new_session_ticket failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -1697,13 +1705,15 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     ticket.key_len = hash_length;
     ticket.ciphersuite = ssl->handshake->ciphersuite_info->id;
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C)
-    /* Check whether the client provided a certificate during the exchange */
-    if( ssl->session->peer_cert != NULL )
-        ticket.peer_cert = ssl->session->peer_cert;
-    else
-        ticket.peer_cert = NULL;
-#endif /* MBEDTLS_X509_CRT_PARSE_C */
+    ssl->session->minor_ver = ssl->minor_ver;
+
+//#if defined(MBEDTLS_X509_CRT_PARSE_C)
+    // Check whether the client provided a certificate during the exchange
+    //if( ssl->session->peer_cert != NULL )
+    //    ticket.peer_cert = ssl->session->peer_cert;
+    //else
+    //    ticket.peer_cert = NULL;
+//#endif /* MBEDTLS_X509_CRT_PARSE_C */
 
     /*
      *  HKDF-Expand-Label( resumption_master_secret,
@@ -1734,12 +1744,11 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ticket.key, ticket.key_len );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->key_len: %d", ticket.key_len ) );
 
-    /* Ticket */
     if( ( ret = ssl->conf->f_ticket_write( ssl->conf->p_ticket,
-                                         &ticket,
-                                         &ssl->out_msg[15+ MBEDTLS_SSL_TICKET_NONCE_LENGTH],
-                                         ssl->out_msg + MBEDTLS_SSL_MAX_CONTENT_LEN,
-                                         &tlen, &ticket.ticket_lifetime, &ticket.flags ) ) != 0 )
+                                           ssl->session,
+                                           &ssl->out_msg[ 15+ MBEDTLS_SSL_TICKET_NONCE_LENGTH ],
+                                           ssl->out_msg + MBEDTLS_SSL_MAX_CONTENT_LEN,
+                                           &tlen, &ticket.ticket_lifetime ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "ticket->mbedtls_ssl_ticket_write", ret );
 /*		tlen = 0; */

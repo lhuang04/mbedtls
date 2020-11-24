@@ -87,13 +87,47 @@ mbedtls_ssl_ticket_context;
  */
 void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx );
 
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
-void mbedtls_ssl_del_client_ticket(mbedtls_ssl_ticket* ticket);
-void mbedtls_ssl_init_client_ticket(mbedtls_ssl_ticket* ticket);
-void mbedtls_ssl_conf_client_ticket_disable(mbedtls_ssl_context* ssl);
-void mbedtls_ssl_conf_client_ticket_enable(mbedtls_ssl_context* ssl);
-int mbedtls_ssl_get_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
-int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
+/**
+ * \brief           Allows the caller to set a ticket.
+ * 
+ * \param ssl       SSL context
+ * \param ticket    Content that contains meta-data about the ticket.
+ * \param buf       Buffer containing the ticket.  
+ * \param size      Size of the ticket buffer
+ * \param ke        Key exchange mode (either PSK or PSK-ECDHE)
+ *
+ * \note            Due to the construction of the ticket exchange in TLS/DTLS 1.3
+ *                  this function is merely a wrapper around setting a PSK. 
+ *
+ * \return          0 if successful,
+ *                  or a specific MBEDTLS_ERR_XXX error code
+ */
+int mbedtls_ssl_conf_client_set_ticket( const mbedtls_ssl_context *ssl,
+                                    mbedtls_ssl_ticket *ticket, unsigned char *buf, size_t size, const int ke ); 
+
+/**
+ * \brief           Allows the caller to retrieve a ticket received in the handshake. 
+ *
+ * \param ssl       SSL context
+ * \param metadata  Content that contains meta-data about the ticket.
+ * \param buf       Buffer used to store the opaque part of the ticket.  
+ * \param size      Size of the opaque part of the ticket.
+ *
+ * \note            A ticket contains of two parts, namely (1) a part that is opaque to the 
+ *                  client (which is used as the psk_identity in the handshake), and 
+ *                  (2) metadata about the ticket.
+ *
+ * \note            If the caller sets either the metadata or the buf parameters to NULL 
+ *                  then the function returns the number of bytes needed to store the 
+ *                  opaque part of the ticket. This is allows the caller to adjust the 
+ *                  required buffer size accordingly. 
+ *
+ * \return          0 if successful,
+ *                  or a specific MBEDTLS_ERR_SSL_BAD_INPUT_DATA error code
+ */
+int mbedtls_ssl_get_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* metadata, void *buf, size_t *size);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 /**
@@ -118,17 +152,10 @@ int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_t
  * \return          0 if successful,
  *                  or a specific MBEDTLS_ERR_XXX error code
  */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
-    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
-    mbedtls_cipher_type_t cipher,
-    uint32_t lifetime, mbedtls_ssl_ticket_flags flags);
-#else 
 int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context* ctx,
     int (*f_rng)(void*, unsigned char*, size_t), void* p_rng,
     mbedtls_cipher_type_t cipher,
     uint32_t lifetime);
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 /**
  * \brief           Implementation of the ticket write callback

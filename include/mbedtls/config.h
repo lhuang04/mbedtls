@@ -1806,76 +1806,78 @@
 //#define MBEDTLS_SSL_TLS13_CTLS
 
 
-/**
-*  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
-*
-* Tolerance window for ticket age value.
-* Outside this tolerance window, 0-RTT mode will be disabled.
-*
-*/
+ /**
+ *  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
+ *
+ * Tolerance window for ticket age value.
+ * Outside this tolerance window, 0-RTT mode will be disabled.
+ *
+ */
 
 #define MBEDTLS_SSL_EARLY_DATA_MAX_DELAY 10000
 
-/**
-*  \def MBEDTLS_SSL_MAX_KEY_SHARES
-*
-* Defines the maximum number of key share entires in a
-* key share extension advertised as part of the ClientHello.
-*
-* The impact of increasing the number of key shares is that
-* a client needs to store more ECDHE key pairs and the
-* transmission size of the ClientHello is increased as well.
-* On the positive side this allows more rapid session
-* establishment in case there is no prior knowledge between
-* the client and the server about the supported algorithms
-* and curves.
-*
-*/
+ /**
+ *  \def MBEDTLS_SSL_MAX_KEY_SHARES
+ *
+ * Defines the maximum number of key share entires in a
+ * key share extension advertised as part of the ClientHello.
+ *
+ * The impact of increasing the number of key shares is that
+ * a client needs to store more ECDHE key pairs and the
+ * transmission size of the ClientHello is increased as well.
+ * On the positive side this allows more rapid session
+ * establishment in case there is no prior knowledge between
+ * the client and the server about the supported algorithms
+ * and curves.
+ *
+ */
 
 #define MBEDTLS_SSL_MAX_KEY_SHARES 1
 
-/**
-* \def MBEDTLS_ZERO_RTT
-*
-* Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
-*
-*/
+ /**
+ * \def MBEDTLS_ZERO_RTT
+ *
+ * Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
+ *
+ */
 #define MBEDTLS_ZERO_RTT
 
-/**
-* \def MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
-*
-* Enables debug output for handshake hashes
-*
-* Requires:
-*
-* Uncomment this macro to print handshake hash information
-*/
+ /**
+ * \def MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
+ *
+ * Enables debug output for handshake hashes
+ *
+ * Requires:
+ *
+ * Uncomment this macro to print handshake hash information
+ */
 //#define MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
 
-/*
-* \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
-*
-* Allows adjusting the length of the nonce field in the ticket.
-*
-* The default value is 32 bytes.
-*/
+ /*
+ * \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
+ *
+ * Allows adjusting the length of the nonce field in the ticket.
+ *
+ * The default value is 32 bytes.
+ */
 #define MBEDTLS_SSL_TICKET_NONCE_LENGTH 32
 
-/*
-* \def MBEDTLS_SSL_NEW_SESSION_TICKET
-*
-* Enable support for TLS 1.3 session tickets.
-* Client-side, provides full support for session tickets (maintainance of a
-* session store remains the responsibility of the application, though).
-* Server-side, you also need to provide callbacks for writing and parsing
-* tickets, including authenticated encryption and key management. Example
-* callbacks are provided by MBEDTLS_SSL_TICKET_C.
-*
-* Comment this macro to
-*  - be able to issue tickets by TLS 1.3 servers, and
-*  - use them in TLS 1.3 clients.
-*/
+ /*
+ * \def MBEDTLS_SSL_NEW_SESSION_TICKET
+ *
+ * Enable support for TLS 1.3 session tickets.
+ * Client-side, provides full support for session tickets (maintainance of a
+ * session store remains the responsibility of the application, though).
+ * Server-side, you also need to provide callbacks for writing and parsing
+ * tickets, including authenticated encryption and key management. Example
+ * callbacks are provided by MBEDTLS_SSL_TICKET_C.
+ *
+ * Comment this macro to
+ *  - be able to issue tickets by TLS 1.3 servers, and
+ *  - use them in TLS 1.3 clients.
+ *
+ * Requires: MBEDTLS_SSL_TICKET_C
+ */
 #define MBEDTLS_SSL_NEW_SESSION_TICKET
 
 /**

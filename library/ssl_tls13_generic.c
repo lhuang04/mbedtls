@@ -1002,6 +1002,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     mbedtls_ssl_handshake_params *handshake = ssl->handshake;
     const mbedtls_ssl_ciphersuite_t *suite_info;
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+    unsigned int hash_size; 
 
 #if defined(MBEDTLS_SHA256_C)
     mbedtls_sha256_context sha256;
@@ -1034,7 +1035,9 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     if( suite_info == NULL )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    hash_size = mbedtls_hash_size_for_ciphersuite( suite_info );
+
+    if( hash_size == 32 )
     {
 #if defined(MBEDTLS_SHA256_C)
         handshake->calc_finished = ssl_calc_finished_tls_sha256;
@@ -1043,8 +1046,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA256_C */
     }
-
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    else if( hash_size == 48 )
     {
 #if defined(MBEDTLS_SHA512_C)
         handshake->calc_finished = ssl_calc_finished_tls_sha384;
@@ -1053,16 +1055,14 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 #endif /* MBEDTLS_SHA512_C */
     }
-
-    if( ( mbedtls_hash_size_for_ciphersuite( suite_info ) != 32 ) &&
-        ( mbedtls_hash_size_for_ciphersuite( suite_info ) != 48 ) )
+    else
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unknown hash function negotiated." ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
 #if defined(MBEDTLS_SHA256_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    if( hash_size == 32 )
     {
         mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
 
@@ -1075,7 +1075,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     else
 #endif /* MBEDTLS_SHA256_C */
 #if defined(MBEDTLS_SHA512_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    if( hash_size == 48 )
     {
         mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
 
@@ -1092,8 +1092,7 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "rolling hash", hash,
-                 mbedtls_hash_size_for_ciphersuite( suite_info ) );
+    MBEDTLS_SSL_DEBUG_BUF( 3, "rolling hash", hash, hash_size );
 
     /*
      *
@@ -1117,13 +1116,13 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
 
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
              (const unsigned char*) ssl->handshake->handshake_secret,
-             (int) mbedtls_hash_size_for_ciphersuite( suite_info ),
+             hash_size,
              MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( c_hs_traffic ),
              (const unsigned char * ) hash,
-             (int) mbedtls_hash_size_for_ciphersuite( suite_info ),
+             hash_size,
              MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
              (unsigned char *) ssl->handshake->client_handshake_traffic_secret,
-             (int) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+             hash_size );
 
     if( ret != 0 )
     {
@@ -1142,14 +1141,14 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
                 ssl->handshake->randbytes,
                 MBEDTLS_SSL_TLS1_3_CLIENT_HANDSHAKE_TRAFFIC_SECRET,
                 ssl->handshake->client_handshake_traffic_secret,
-                (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                hash_size );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, c hs traffic], requested length %d", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Secret: ", ssl->handshake->handshake_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash:", hash, mbedtls_hash_size_for_ciphersuite( suite_info ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "client_handshake_traffic_secret", ssl->handshake->client_handshake_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, c hs traffic], requested length %d", hash_size ) );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Secret: ", ssl->handshake->handshake_secret, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash:", hash, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client_handshake_traffic_secret", ssl->handshake->client_handshake_traffic_secret, hash_size );
 
     /*
      * Compute server_handshake_traffic_secret with
@@ -1157,13 +1156,11 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
      */
 
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
-                         ssl->handshake->handshake_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         ssl->handshake->handshake_secret, hash_size,
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( s_hs_traffic ),
-                         hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash, hash_size,
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
-                         ssl->handshake->server_handshake_traffic_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                         ssl->handshake->server_handshake_traffic_secret, hash_size );
     if( ret != 0 )
         goto exit;
 
@@ -1174,17 +1171,17 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
     if( ssl->conf->f_export_secret != NULL )
     {
         ssl->conf->f_export_secret( ssl->conf->p_export_secret,
-                ssl->handshake->randbytes,
-                MBEDTLS_SSL_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
-                ssl->handshake->server_handshake_traffic_secret,
-                (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                                    ssl->handshake->randbytes,
+                                    MBEDTLS_SSL_TLS1_3_SERVER_HANDSHAKE_TRAFFIC_SECRET,
+                                    ssl->handshake->server_handshake_traffic_secret,
+                                    hash_size );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, s hs traffic], requested length %d", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Secret: ", ssl->handshake->handshake_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash:", hash, mbedtls_hash_size_for_ciphersuite( suite_info ) );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "server_handshake_traffic_secret", ssl->handshake->server_handshake_traffic_secret, mbedtls_hash_size_for_ciphersuite( suite_info ) );
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "HKDF Expand: label=[TLS 1.3, s hs traffic], requested length %d", hash_size ) );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Secret: ", ssl->handshake->handshake_secret, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "Hash:", hash, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "server_handshake_traffic_secret", ssl->handshake->server_handshake_traffic_secret, hash_size );
 
     /*
      * Compute exporter_secret with
@@ -1192,13 +1189,11 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
      */
 
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
-                         ssl->handshake->master_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         ssl->handshake->master_secret, hash_size,
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( exp_master ),
-                         hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash, hash_size,
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
-                         ssl->handshake->exporter_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                         ssl->handshake->exporter_secret, hash_size );
     if( ret != 0 )
         goto exit;
 
@@ -1211,14 +1206,13 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
         ssl->conf->f_export_secret( ssl->conf->p_export_secret,
                 ssl->handshake->randbytes,
                 MBEDTLS_SSL_TLS1_3_EXPORTER_MASTER_SECRET,
-                ssl->handshake->exporter_secret,
-                (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                ssl->handshake->exporter_secret, hash_size );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "exporter_secret",
                            ssl->handshake->exporter_secret,
-                           mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                           hash_size );
 
     /*
      * Compute keys to protect the handshake messages utilizing MakeTrafficKey
@@ -1247,43 +1241,32 @@ int mbedtls_ssl_derive_traffic_keys( mbedtls_ssl_context *ssl, mbedtls_ssl_key_s
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-->>Calling mbedtls_ssl_tls1_3_make_traffic_keys( ) with the following parameters:" ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Hash Algorithm: %s", mbedtls_md_get_name( md_info ) ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Handshake Traffic Secret Length: %d bytes", mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Handshake Traffic Secret Length: %d bytes", hash_size ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Key Length: %d bytes", transform->keylen ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- IV Length: %d bytes", transform->ivlen ) );
 
     if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md_info ),
                                  ssl->handshake->client_handshake_traffic_secret,
                                  ssl->handshake->server_handshake_traffic_secret,
-                                 mbedtls_hash_size_for_ciphersuite( suite_info ),
+                                 hash_size,
                                  transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
         goto exit;
     }
 
-    /* TEST
-       if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md_info ),
-       ssl->handshake->server_handshake_traffic_secret,
-       ssl->handshake->client_handshake_traffic_secret,
-       mbedtls_hash_size_for_ciphersuite( suite_info ),
-       transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
-       {
-       MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
-       return( ret );
-       }
-    */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= derive traffic keys" ) );
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    if( hash_size == 32 )
     {
         mbedtls_sha256_free( &sha256 );
     }
     else
 #endif
 #if defined(MBEDTLS_SHA512_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    if( hash_size == 48 )
     {
         mbedtls_sha512_free( &sha512 );
     }
@@ -3144,6 +3127,7 @@ static int ssl_read_certificate_postprocess( mbedtls_ssl_context* ssl )
 int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
+    unsigned int hash_size;
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
     const mbedtls_md_info_t *md_info;
@@ -3173,8 +3157,10 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
+    hash_size = mbedtls_hash_size_for_ciphersuite( suite_info );
+
 #if defined(MBEDTLS_SHA256_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    if( hash_size == 32 )
     {
         mbedtls_sha256_clone( &sha256, &ssl->handshake->fin_sha256 );
 
@@ -3187,7 +3173,7 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SHA256_C */
 #if defined(MBEDTLS_SHA512_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    if( hash_size == 48 )
     {
         mbedtls_sha512_clone( &sha512, &ssl->handshake->fin_sha512 );
 
@@ -3211,32 +3197,32 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
 
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash_size,
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( res_master ),
-                         hash, mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash, hash_size,
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
                          ssl->session_negotiate->resumption_master_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                         hash_size );
 
     if( ret != 0 )
         goto exit;
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "resumption_master_secret",
                            ssl->session_negotiate->resumption_master_secret,
-                           mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                           hash_size );
 
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    if( hash_size == 32 )
     {
         mbedtls_sha256_free( &sha256 );
     }
     else
 #endif
 #if defined(MBEDTLS_SHA512_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    if( hash_size == 48 )
     {
         mbedtls_sha512_free( &sha512 );
     }
@@ -3262,6 +3248,7 @@ int mbedtls_ssl_generate_application_traffic_keys(
     const mbedtls_ssl_ciphersuite_t *suite_info;
     const mbedtls_cipher_info_t *cipher_info;
     mbedtls_ssl_transform *transform = ssl->transform_negotiate;
+    unsigned int hash_size;
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> derive application traffic keys" ) );
 
@@ -3286,6 +3273,8 @@ int mbedtls_ssl_generate_application_traffic_keys(
     if( suite_info == NULL )
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
 
+    hash_size = mbedtls_hash_size_for_ciphersuite( suite_info );
+
     /*
      * Determine the appropriate key, IV and MAC length.
      */
@@ -3308,7 +3297,7 @@ int mbedtls_ssl_generate_application_traffic_keys(
 
     MBEDTLS_SSL_DEBUG_BUF( 5, "Transcript hash (including Server.Finished):",
                               ssl->handshake->server_finished_digest,
-                              mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                              hash_size );
 
     /* Generate client_application_traffic_secret_0
      *
@@ -3321,13 +3310,13 @@ int mbedtls_ssl_generate_application_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash_size,
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( c_ap_traffic ),
                          ssl->handshake->server_finished_digest,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash_size,
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
                          ssl->handshake->client_traffic_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                         hash_size );
 
     if( ret != 0 )
     {
@@ -3345,7 +3334,7 @@ int mbedtls_ssl_generate_application_traffic_keys(
                 ssl->handshake->randbytes,
                 MBEDTLS_SSL_TLS1_3_CLIENT_APPLICATION_TRAFFIC_SECRET_0,
                 ssl->handshake->client_traffic_secret,
-                (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                hash_size );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
@@ -3360,13 +3349,13 @@ int mbedtls_ssl_generate_application_traffic_keys(
 
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md_info ),
                          ssl->handshake->master_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash_size,
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( s_ap_traffic ),
                          ssl->handshake->server_finished_digest,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ),
+                         hash_size,
                          MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
                          ssl->handshake->server_traffic_secret,
-                         mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                         hash_size );
     if( ret != 0 )
         return( ret );
 
@@ -3380,7 +3369,7 @@ int mbedtls_ssl_generate_application_traffic_keys(
                 ssl->handshake->randbytes,
                 MBEDTLS_SSL_TLS1_3_SERVER_APPLICATION_TRAFFIC_SECRET_0,
                 ssl->handshake->server_traffic_secret,
-                (size_t) mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                hash_size );
     }
 #endif /* MBEDTLS_SSL_EXPORT_KEYS */
 
@@ -3390,21 +3379,18 @@ int mbedtls_ssl_generate_application_traffic_keys(
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-->> Calling mbedtls_ssl_tls1_3_make_traffic_keys( ):" ) );
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Hash Algorithm: %s", mbedtls_md_get_name( md_info ) ) );
-    MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Handshake Traffic Secret Length: %d bytes",
-                              mbedtls_hash_size_for_ciphersuite( suite_info ) ) );
+    MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Handshake Traffic Secret Length: %d bytes", hash_size ) );
     MBEDTLS_SSL_DEBUG_BUF( 5, "-- Client_traffic_secret:",
-                              ssl->handshake->client_traffic_secret,
-                              mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                              ssl->handshake->client_traffic_secret, hash_size );
     MBEDTLS_SSL_DEBUG_BUF( 5, "-- Server_traffic_secret: ",
-                              ssl->handshake->server_traffic_secret,
-                              mbedtls_hash_size_for_ciphersuite( suite_info ) );
+                              ssl->handshake->server_traffic_secret, hash_size );
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- Key Length: %d bytes", transform->keylen ) );
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "-- IV Length: %d bytes", transform->ivlen ) );
 
     if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md_info ),
                               ssl->handshake->client_traffic_secret,
                               ssl->handshake->server_traffic_secret,
-                              mbedtls_hash_size_for_ciphersuite( suite_info ),
+                              hash_size,
                               transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
@@ -3641,12 +3627,12 @@ int mbedtls_set_traffic_key( mbedtls_ssl_context *ssl,
 int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys )
 {
     int ret;
-    int hash_length;
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info;
     const mbedtls_cipher_info_t *cipher_info;
     const mbedtls_md_info_t *md;
     unsigned char padbuf[MBEDTLS_MD_MAX_SIZE];
     mbedtls_ssl_transform *transform;
+    unsigned int hash_size;
 
 #if defined(MBEDTLS_SHA256_C)
     mbedtls_sha256_context sha256;
@@ -3724,11 +3710,11 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    hash_length = mbedtls_hash_size_for_ciphersuite( ciphersuite_info );
+    hash_size = mbedtls_hash_size_for_ciphersuite( ciphersuite_info );
 
-    if( hash_length == -1 )
+    if( hash_size == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == -1, mbedtls_ssl_early_data_key_derivation failed" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite == 0, mbedtls_ssl_early_data_key_derivation failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
@@ -3835,13 +3821,13 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
 
     /* Create client_early_traffic_secret */
     ret = mbedtls_ssl_tls1_3_derive_secret( mbedtls_md_get_type( md ),
-                         ssl->handshake->early_secret, hash_length,
+                         ssl->handshake->early_secret, hash_size,
                          MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( c_e_traffic ),
-                         padbuf, hash_length, MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
-                         ssl->handshake->client_early_traffic_secret, hash_length );
+                         padbuf, hash_size, MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED,
+                         ssl->handshake->client_early_traffic_secret, hash_size );
 
-    MBEDTLS_SSL_DEBUG_BUF( 5, "early_secret", ssl->handshake->early_secret, hash_length );
-    MBEDTLS_SSL_DEBUG_BUF( 5, "client_early_traffic_secret", ssl->handshake->client_early_traffic_secret, hash_length );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "early_secret", ssl->handshake->early_secret, hash_size );
+    MBEDTLS_SSL_DEBUG_BUF( 5, "client_early_traffic_secret", ssl->handshake->client_early_traffic_secret, hash_size );
 
     MBEDTLS_SSL_DEBUG_MSG( 5, ( "mbedtls_ssl_tls1_3_derive_secret with 'c e traffic'" ) );
 
@@ -3874,14 +3860,14 @@ int mbedtls_ssl_early_data_key_derivation( mbedtls_ssl_context *ssl, mbedtls_ssl
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-->>Calling mbedtls_ssl_tls1_3_make_traffic_keys( ) with the following parameters:" ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Hash Algorithm: %s", mbedtls_md_get_name( md ) ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Early Traffic Secret Length: %d bytes", mbedtls_hash_size_for_ciphersuite( ciphersuite_info ) ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Early Traffic Secret Length: %d bytes", hash_size ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- Key Length: %d bytes", transform->keylen ) );
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "-- IV Length: %d bytes", transform->ivlen ) );
 
     if( ( ret = mbedtls_ssl_tls1_3_make_traffic_keys( mbedtls_md_get_type( md ),
                                  ssl->handshake->client_early_traffic_secret,
                                  ssl->handshake->client_early_traffic_secret,
-                                 mbedtls_hash_size_for_ciphersuite( ciphersuite_info ),
+                                 hash_size,
                                  transform->keylen, transform->ivlen, traffic_keys ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_make_traffic_keys failed", ret );
@@ -4166,6 +4152,7 @@ static int ssl_finished_out_prepare( mbedtls_ssl_context* ssl )
 static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret;
+
 #if defined(MBEDTLS_SSL_SRV_C)
     const mbedtls_ssl_ciphersuite_t *suite_info =
         mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
@@ -4259,7 +4246,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
-        if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+        if( suite_info->mac == MBEDTLS_MD_SHA256 )
         {
 #if defined(MBEDTLS_SHA256_C)
             mbedtls_sha256_init( &sha256 );
@@ -4284,7 +4271,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 #endif /* MBEDTLS_SHA256_C */
         }
 
-        if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+        if( suite_info->mac == MBEDTLS_MD_SHA384 )
         {
 #if defined(MBEDTLS_SHA512_C)
             mbedtls_sha512_init( &sha512 );
@@ -4312,14 +4299,14 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
 
 exit:
 #if defined(MBEDTLS_SHA256_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 32 )
+    if( suite_info->mac == MBEDTLS_MD_SHA256 )
     {
         mbedtls_sha256_free( &sha256 );
     }
     else
 #endif
 #if defined(MBEDTLS_SHA512_C)
-    if( mbedtls_hash_size_for_ciphersuite( suite_info ) == 48 )
+    if( suite_info->mac == MBEDTLS_MD_SHA384 )
     {
         mbedtls_sha512_free( &sha512 );
     }
@@ -4433,7 +4420,7 @@ cleanup:
 
 static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl )
 {
-    unsigned int hash_len;
+    unsigned int hash_size;
     const mbedtls_ssl_ciphersuite_t* suite_info;
 
     suite_info = mbedtls_ssl_ciphersuite_from_id( ssl->session_negotiate->ciphersuite );
@@ -4444,15 +4431,15 @@ static int ssl_finished_in_preprocess( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    hash_len = mbedtls_hash_size_for_ciphersuite( suite_info );
+    hash_size = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-    if( hash_len == 0 )
+    if( hash_size == 0 )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_hash_size_for_ciphersuite in ssl_finished_in_preprocess failed" ) );
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
     }
 
-    ssl->handshake->state_local.finished_in.digest_len = hash_len;
+    ssl->handshake->state_local.finished_in.digest_len = hash_size;
 
     ssl->handshake->calc_finished( ssl,
                                    ssl->handshake->state_local.finished_in.digest,
@@ -4867,97 +4854,42 @@ void mbedtls_ssl_conf_signature_algorithms( mbedtls_ssl_config *conf,
 
 #if defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 
-/*
- * Init ticket structure
- */
-
-void mbedtls_ssl_init_client_ticket( mbedtls_ssl_ticket *ticket )
-{
-    if( ticket == NULL )
-        return;
-
-    ticket->ticket = NULL;
-    memset( ticket->key,0,sizeof( ticket->key ) );
-}
-
-
-/*
- * Free an ticket structure
- */
-void mbedtls_ssl_del_client_ticket( mbedtls_ssl_ticket *ticket )
-{
-    if( ticket == NULL )
-        return;
-
-    if( ticket->ticket != NULL )
-    {
-        mbedtls_platform_zeroize( ticket->ticket, ticket->ticket_len );
-        mbedtls_free( ticket->ticket );
-    }
-
-    mbedtls_platform_zeroize( ticket->key, sizeof( ticket->key ) );
-}
-
 #if defined(MBEDTLS_SSL_CLI_C)
-int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
-                                    mbedtls_ssl_ticket *ticket )
+
+int mbedtls_ssl_conf_client_set_ticket( const mbedtls_ssl_context *ssl,
+                                    mbedtls_ssl_ticket *ticket, unsigned char *buf, size_t size, const int key_exchange_mode )
 {
     int ret;
-    mbedtls_ssl_config *conf = ( mbedtls_ssl_config * ) ssl->conf;
+    mbedtls_ssl_config *conf  = ( mbedtls_ssl_config * ) ssl->conf;
 
-    /* TODO: Remove some of these checks? We sometimes omit explicit NULL
-     * pointer checks and leave those as preconditions. */
-
-    if( conf == NULL )
+    if( conf == NULL || ticket == NULL || ticket->key_len == 0 || size == 0 || buf == NULL )
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid configuration in "
-                                    "mbedtls_ssl_conf_client_ticket()" ) );
+                                    "mbedtls_ssl_conf_client_set_ticket()" ) );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
-    if( ticket == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket in "
-                                    "mbedtls_ssl_conf_client_ticket()" ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-    if( ticket->key_len == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket key length in "
-                                    "mbedtls_ssl_conf_client_ticket()" ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-    if( ticket->ticket_len == 0 )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket length in "
-                                    "mbedtls_ssl_conf_client_ticket()" ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-    if( ticket->ticket == NULL )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "Invalid ticket in "
-                                    "mbedtls_ssl_conf_client_ticket()" ) );
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-    }
-
-    /* We don't request another ticket from the server.
-     * TBD: This function could be moved to an application-visible API call.
-     */
-    mbedtls_ssl_conf_session_tickets( conf, 0 );
 
     /* Set the psk and psk_identity */
     ret = mbedtls_ssl_conf_psk( conf, ticket->key, ticket->key_len,
-                                ( const unsigned char * )ticket->ticket,
-                                ticket->ticket_len );
-    if( ret != 0 )
+                                ( const unsigned char * )buf,
+                                size );
+    if( ret != 0 ) 
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_conf_psk() failed (%d)", ret ) );
         return( ret );
+    }
 
-    /* Set the key exchange mode to PSK
-     * TBD: Ideally, the application developer should have the option
-     * to decide between plain PSK-KE and PSK-KE-DH
-     */
-    ret = mbedtls_ssl_conf_ke( conf, 0 );
+    /* Set the key exchange mode to PSK */
+    if ( key_exchange_mode == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE )
+       ret = mbedtls_ssl_conf_ke( conf, MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE );
+    else 
+       ret = mbedtls_ssl_conf_ke( conf, MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE );
+
     if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_conf_ke() failed (%d)", ret ) );
         return( ret );
+    }
 
     /* We set the ticket_age_add and the time we received the ticket */
 #if defined(MBEDTLS_HAVE_TIME)
@@ -4966,98 +4898,68 @@ int mbedtls_ssl_conf_client_ticket( const mbedtls_ssl_context *ssl,
     ret = mbedtls_ssl_conf_ticket_meta( conf, ticket->ticket_age_add );
 #endif /* MBEDTLS_HAVE_TIME */
 
-    if( ret != 0 )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    if( ret != 0 )    
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "mbedtls_ssl_conf_ticket_meta() failed (%d)", ret ) );
+        return( ret );
+    }
+    
+    /* This is a resumption-based PSK */
+    conf->resumption_mode = 1; 
 
     return( 0 );
 }
-#endif /* MBEDTLS_SSL_CLI_C */
 
-#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_CLI_C)
-int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_ticket *ticket )
+int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_ticket *metadata, void *buf, size_t *size)
 {
     const mbedtls_ssl_ciphersuite_t *cur;
     int hash_size;
 
-    if( ssl->session == NULL ) return( -1 );
+    if( ssl->session == NULL ) return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
     /* Check whether we got a ticket already */
-    if( ssl->session->ticket != NULL )
+    if( ssl->session->ticket == NULL ) return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+    /* Return ticket size only */
+    if( buf == NULL || metadata == NULL )
     {
+        *size = ssl->session->ticket_len;
+        return( 0 ); 
+    } 
 
-        /* store ticket */
-        ticket->ticket_len = ssl->session->ticket_len;
-        if( ticket->ticket_len == 0 ) return( -1 );
-        ticket->ticket = mbedtls_calloc( ticket->ticket_len,1 );
-        if( ticket->ticket == NULL ) return( -1 );
-        memcpy( ticket->ticket, ssl->session->ticket, ticket->ticket_len );
+    /* store ticket in ticket_buffer */
+    *size = ssl->session->ticket_len;
+    memcpy( buf, ssl->session->ticket, ssl->session->ticket_len );
 
-        /* store ticket lifetime */
-        ticket->ticket_lifetime = ssl->session->ticket_lifetime;
+    /* store ticket lifetime */
+    metadata->ticket_lifetime = ssl->session->ticket_lifetime;
 
-        /* store psk key and key length */
-        cur = mbedtls_ssl_ciphersuite_from_id( ssl->session->ciphersuite );
-        if( cur == NULL )
-        {
-            mbedtls_free( ticket->ticket );
-            return( -1 );
-        }
+    /* store psk key and key length */
+    cur = mbedtls_ssl_ciphersuite_from_id( ssl->session->ciphersuite );
+    
+    if( cur == NULL ) return ( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-        hash_size=mbedtls_hash_size_for_ciphersuite( cur );
+    hash_size = mbedtls_hash_size_for_ciphersuite( cur );
 
-        if( hash_size < 0 )
-        {
-            mbedtls_free( ticket->ticket );
-            return( -1 );
-        }
-        else
-        {
-            ticket->key_len = hash_size;
-        }
-        memcpy( ticket->key, ssl->session->key, ticket->key_len );
-        ssl->session->key_len = ticket->key_len;
+    if( hash_size == 0 ) return ( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+    
+    metadata->key_len = hash_size;
+        
+    memcpy( metadata->key, ssl->session->key, hash_size );
+    //ssl->session->key_len = ticket->key_len;
 
-        /* store ticket_age_add */
-        ticket->ticket_age_add = ssl->session->ticket_age_add;
+    /* store ticket_age_add */
+    metadata->ticket_age_add = ssl->session->ticket_age_add;
 
 #if defined(MBEDTLS_HAVE_TIME)
-        /* store time we received the ticket */
-        ticket->start = ssl->session->ticket_received;
+    /* store time we received the ticket */
+    metadata->start = ssl->session->ticket_received;
 #endif /* MBEDTLS_HAVE_TIME */
 
-        return( 0 );
-    }
-    else
-    {
-        /* no ticket available */
-        return( 1 );
-    }
+    return( 0 );
 }
-#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
-
-void mbedtls_ssl_conf_client_ticket_enable( mbedtls_ssl_context *ssl )
-{
-    mbedtls_ssl_config *conf;
-    if( ssl == NULL ) return;
-    conf = ( mbedtls_ssl_config * ) ssl->conf;
-    if( conf == NULL ) return;
-    conf->resumption_mode = 1; /* enable resumption mode */
-}
-
-void mbedtls_ssl_conf_client_ticket_disable( mbedtls_ssl_context *ssl )
-{
-    mbedtls_ssl_config *conf;
-
-    if( ssl == NULL ) return;
-    conf = ( mbedtls_ssl_config * ) ssl->conf;
-    if( conf == NULL ) return;
-    conf->resumption_mode = 0; /* set full exchange */
-}
-
+#endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET */
-
-
-
 
 
 /* Early Data Extension
