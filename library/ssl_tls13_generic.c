@@ -2085,7 +2085,7 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
                                      !ssl->conf->endpoint );
 
         /* Read message */
-        if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
+        if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, ( "mbedtls_ssl_read_record_layer" ), ret );
             return( ret );
@@ -2665,7 +2665,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Reading step */
         if( ssl->keep_current_message == 0 )
         {
-            if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
+            if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
             {
                 /* mbedtls_ssl_read_record may have sent an alert already. We
                    let it decide whether to alert. */
@@ -4381,7 +4381,7 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_preprocess( ssl ) );
 
     /* Fetching step */
-    if( ( ret = mbedtls_ssl_read_record( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         goto cleanup;
