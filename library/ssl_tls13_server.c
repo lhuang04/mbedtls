@@ -26,8 +26,10 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+
+#define SSL_DONT_FORCE_FLUSH 0
+#define SSL_FORCE_FLUSH      1
 
 #if defined(MBEDTLS_SSL_SRV_C)
 
@@ -1781,7 +1783,7 @@ static int ssl_write_new_session_ticket( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "NewSessionTicket ( ticket length ): %d", tlen ) );
     MBEDTLS_SSL_DEBUG_BUF( 3, "NewSessionTicket ( ticket dump ):", &ssl->out_msg[15 + MBEDTLS_SSL_TICKET_NONCE_LENGTH], tlen );
 
-    if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
         return( ret );
@@ -3436,7 +3438,7 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
     /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
     /* NOTE: For the new messaging layer, the postprocessing step
      *       might come after the dispatching step if the latter
@@ -3867,7 +3869,7 @@ static int ssl_write_hello_retry_request( mbedtls_ssl_context *ssl )
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_SERVER_HELLO;
 
-    if( ( ret = mbedtls_ssl_write_record( ssl ) ) != 0 )
+    if( ( ret = mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_record", ret );
         return( ret );
@@ -3932,7 +3934,7 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
 
     /* Dispatch */
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
     /* NOTE: For the new messaging layer, the postprocessing step
      *       might come after the dispatching step if the latter
@@ -4264,7 +4266,7 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
 
         /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
 
         /* NOTE: With the new messaging layer, the postprocessing
          *       step might come after the dispatching step if the
