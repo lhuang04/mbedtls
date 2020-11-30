@@ -5072,6 +5072,8 @@ int mbedtls_ssl_send_fatal_handshake_failure( mbedtls_ssl_context *ssl )
                   MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE ) );
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
                             unsigned char level,
                             unsigned char message )
@@ -5098,6 +5100,8 @@ int mbedtls_ssl_send_alert_message( mbedtls_ssl_context *ssl,
 
     return( 0 );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 
 int mbedtls_ssl_write_change_cipher_spec( mbedtls_ssl_context *ssl )
 {
