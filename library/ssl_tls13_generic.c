@@ -1801,7 +1801,6 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     int ret;
     size_t n = 0, offset = 0;
     unsigned char verify_buffer[ MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE ];
-    const int *sig_scheme; /* iterate through configured signature schemes */
     size_t verify_buffer_len;
     mbedtls_pk_context *own_key;
     size_t own_key_size;
@@ -1862,6 +1861,8 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
     /* Verify whether we can use signature algorithm */
     ssl->handshake->signature_scheme_client = SIGNATURE_NONE;
 
+#if defined(MBEDTLS_SSL_SRV_C)
+    const int *sig_scheme; /* iterate through configured signature schemes */
     if( ssl->handshake->received_signature_schemes_list != NULL )
     {
         for( sig_scheme = ssl->handshake->received_signature_schemes_list; *sig_scheme != SIGNATURE_NONE; sig_scheme++ )
@@ -1873,6 +1874,7 @@ static int ssl_certificate_verify_write( mbedtls_ssl_context* ssl,
             }
         }
     }
+#endif /* MBEDTLS_SSL_SRV_C */
 
     if( ssl->handshake->signature_scheme_client == SIGNATURE_NONE )
     {
