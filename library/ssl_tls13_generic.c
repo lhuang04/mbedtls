@@ -1637,7 +1637,7 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_verify_postprocess( ssl ) );
 
         /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
         /* NOTE: With the new messaging layer, the postprocessing
          *       step might come after the dispatching step if the
@@ -2378,7 +2378,7 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE;
 
         /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_certificate_postprocess( ssl ) );
@@ -3890,7 +3890,7 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_FINISHED;
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
     MBEDTLS_SSL_PROC_CHK( ssl_finished_out_postprocess( ssl ) );
 
