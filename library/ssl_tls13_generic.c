@@ -4932,22 +4932,13 @@ int mbedtls_ssl_get_client_ticket( const mbedtls_ssl_context *ssl, mbedtls_ssl_t
 }
 #endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_CLI_C */
 
-void mbedtls_ssl_conf_client_ticket_enable( mbedtls_ssl_context *ssl )
+void mbedtls_ssl_conf_client_ticket_enable( mbedtls_ssl_config *conf )
 {
-    mbedtls_ssl_config *conf;
-    if( ssl == NULL ) return;
-    conf = ( mbedtls_ssl_config * ) ssl->conf;
-    if( conf == NULL ) return;
     conf->resumption_mode = 1; /* enable resumption mode */
 }
 
-void mbedtls_ssl_conf_client_ticket_disable( mbedtls_ssl_context *ssl )
+void mbedtls_ssl_conf_client_ticket_disable( mbedtls_ssl_config *conf )
 {
-    mbedtls_ssl_config *conf;
-
-    if( ssl == NULL ) return;
-    conf = ( mbedtls_ssl_config * ) ssl->conf;
-    if( conf == NULL ) return;
     conf->resumption_mode = 0; /* set full exchange */
 }
 

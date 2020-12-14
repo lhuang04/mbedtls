@@ -3815,7 +3815,7 @@ reconnect:
             goto exit;
         }
         // enable resumption
-        mbedtls_ssl_conf_client_ticket_enable( &ssl );
+        mbedtls_ssl_conf_client_ticket_enable( ( mbedtls_ssl_config * ) ssl.conf );
 #else
 
         if( opt.reco_mode == 1 )

@@ -90,8 +90,8 @@ void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx );
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_SSL_NEW_SESSION_TICKET)
 void mbedtls_ssl_del_client_ticket(mbedtls_ssl_ticket* ticket);
 void mbedtls_ssl_init_client_ticket(mbedtls_ssl_ticket* ticket);
-void mbedtls_ssl_conf_client_ticket_disable(mbedtls_ssl_context* ssl);
-void mbedtls_ssl_conf_client_ticket_enable(mbedtls_ssl_context* ssl);
+void mbedtls_ssl_conf_client_ticket_disable(mbedtls_ssl_config *conf);
+void mbedtls_ssl_conf_client_ticket_enable(mbedtls_ssl_config *conf);
 int mbedtls_ssl_get_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
 int mbedtls_ssl_conf_client_ticket(const mbedtls_ssl_context* ssl, mbedtls_ssl_ticket* ticket);
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_SSL_NEW_SESSION_TICKET */
