@@ -1011,7 +1011,7 @@ int mbedtls_ssl_write_pre_shared_key_ext( mbedtls_ssl_context *ssl,
          */
         if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
         {
-            ssl->session_negotiate->key_exchange = MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE;
+            ssl->session_negotiate->key_exchange = MBEDTLS_KEY_EXCHANGE_NONE;
         }
 #endif
         break;
