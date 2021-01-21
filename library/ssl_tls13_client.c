@@ -1892,8 +1892,8 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
     /* For PSK-based ciphersuites we don't really need the SNI extension */
-    if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) {
+    if( mbedtls_ssl_conf_tls13_pure_ecdhe_enabled( ssl ) )
+    {
         ssl_write_hostname_ext( ssl, buf, end, &cur_ext_len );
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
@@ -1926,11 +1926,8 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
     /* The supported_groups and the key_share extensions are
      * REQUIRED for ECDHE ciphersuites.
      */
-    if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) {
-
+    if( mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+    {
         ret = ssl_write_supported_groups_ext( ssl, buf, end, &cur_ext_len );
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
@@ -1942,8 +1939,8 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      * certificate authenticated ciphersuites.
      */
 
-    if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ECDHE_ECDSA ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) {
+    if( mbedtls_ssl_conf_tls13_pure_psk_enabled( ssl ) )
+    {
         ret = mbedtls_ssl_write_signature_algorithms_ext( ssl, buf, end, &cur_ext_len );
         total_ext_len += cur_ext_len;
         buf += cur_ext_len;
@@ -1957,9 +1954,8 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
      *    psk_key_exchange_modes has been added as the last extension.
      * 3 ) Or, in case all ciphers are supported ( which includes #1 and #2 from above )
      */
-    if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) {
+    if( mbedtls_ssl_conf_tls13_some_ecdhe_enabled( ssl ) )
+    {
         /* We are using a PSK-based key exchange with DHE */
         ret = ssl_write_key_shares_ext( ssl, buf, end, &cur_ext_len );
         total_ext_len += cur_ext_len;
@@ -1981,11 +1977,8 @@ static int ssl_client_hello_write( mbedtls_ssl_context* ssl,
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
 
-    if( ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_ALL ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_KE ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_PSK_DHE_KE ||
-        ssl->conf->key_exchange_modes == MBEDTLS_SSL_TLS13_KEY_EXCHANGE_MODE_ALL ) {
-
+    if( mbedtls_ssl_conf_tls13_some_psk_enabled( ssl ) )
+    {
         /* We need to save the pointer to the pre-shared key extension
          * because it has to be updated later.
          */
