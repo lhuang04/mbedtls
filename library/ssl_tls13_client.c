@@ -1934,6 +1934,15 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     }
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        ssl_write_quic_transport_parameters_ext( ssl, buf, end, &cur_ext_len );
+        total_ext_len += cur_ext_len;
+        buf += cur_ext_len;
+    }
+#endif
+
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     /* For PSK-based ciphersuites we need the pre-shared-key extension
      * and the psk_key_exchange_modes extension.
@@ -4239,10 +4248,14 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                  * second flight. This may either be before its second
                  * ClientHello or before its encrypted handshake flight.
                  */
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
-#else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+                if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+                {
+                    state = MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO;
+                }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+                mbedtls_ssl_handshake_set_state( ssl, state );
             }
             else
             {
