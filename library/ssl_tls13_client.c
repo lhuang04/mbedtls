@@ -37,6 +37,7 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
+#include "mbedtls/ssl_ticket.h"
 #include "ssl_tls13_keys.h"
 
 #include <string.h>
@@ -160,18 +161,23 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
-        /* Make sure we can write a new message. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+        {
+            /* Make sure we can write a new message. */
+            MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
-        /* Write early-data to message buffer. */
-        MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
-                                                          MBEDTLS_SSL_MAX_CONTENT_LEN,
-                                                          &ssl->out_msglen ) );
+            /* Write early-data to message buffer. */
+            MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
+                        MBEDTLS_SSL_MAX_CONTENT_LEN,
+                        &ssl->out_msglen ) );
 
-        ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
+            ssl->out_msgtype = MBEDTLS_SSL_MSG_APPLICATION_DATA;
 
-        /* Dispatch message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+            /* Dispatch message */
+            MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+        }
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
@@ -244,6 +250,11 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     }
 
 #else /* MBEDTLS_SSL_USE_MPS */
+
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+        mbedtls_set_quic_traffic_key(ssl, MBEDTLS_SSL_CRYPTO_LEVEL_EARLY_DATA);
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
     ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_earlydata, 0 );
     if( ret != 0 )
@@ -404,6 +415,11 @@ static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
 {
     ((void) ssl);
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+        return( SSL_END_OF_EARLY_DATA_SKIP );
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 #if defined(MBEDTLS_ZERO_RTT)
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
         return( SSL_END_OF_EARLY_DATA_WRITE );
@@ -414,6 +430,14 @@ static int ssl_write_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
 
 static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
+        return ( 0 );
+    }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
 #if defined(MBEDTLS_ZERO_RTT)
     if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
@@ -428,6 +452,56 @@ static int ssl_write_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
     return ( 0 );
 }
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+
+/* QUIC transport parameters extensions. [draft-ietf-quic-tls 8.2]
+ *
+ *  QUIC transport parameters are carried in a TLS extension. Different
+ *  versions of QUIC might define a different method for negotiating
+ *  transport configuration.
+ *
+ *  Including transport parameters in the TLS handshake provides
+ *  integrity protection for these values.
+ *
+ *  QUIC transport parameters MUST be included in the ClientHello message.
+ *
+ *  enum {
+ *     quic_transport_parameters(0xffa5), (65535)
+ *  } ExtensionType;
+ *
+ */
+static void ssl_write_quic_transport_parameters_ext(mbedtls_ssl_context *ssl,
+	unsigned char *buf,
+  unsigned char* end,
+	size_t *olen)
+{
+    unsigned char *p = buf;
+    const uint8_t *tp = ssl->quic_transport_params;
+    size_t tp_len = ssl->quic_transport_params_len;
+    // Extension wire size - ext_header[2] + ext_length[2] + tp_len
+    size_t  ext_len = sizeof(uint16_t) + sizeof(uint16_t) + tp_len;
+
+    *olen = 0;
+
+    MBEDTLS_SSL_DEBUG_MSG(3, ("client hello, adding quic_transport_parameters extension: %p %u",
+                tp, tp_len));
+
+    if ((end - p) < (ptrdiff_t)ext_len)
+    {
+        MBEDTLS_SSL_DEBUG_MSG(1, ("buffer too small"));
+        return;
+    }
+
+    *p++ = (unsigned char)((MBEDTLS_TLS_EXT_QUIC_TRANSPORT_PARAMS >> 8) & 0xFF);
+    *p++ = (unsigned char)((MBEDTLS_TLS_EXT_QUIC_TRANSPORT_PARAMS) & 0xFF);
+
+    *p++ = (unsigned char)((tp_len >> 8) & 0xFF);
+    *p++ = (unsigned char)(tp_len & 0xFF);
+
+    memcpy(p, tp, tp_len);
+    *olen = ext_len;
+}
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static void ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
@@ -1525,19 +1599,24 @@ static int ssl_client_hello_prepare( mbedtls_ssl_context* ssl )
     }
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-    /* Determine whether session id has not been created already */
-    if( ssl->session_negotiate->id_len == 0 )
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
     {
+      /* Determine whether session id has not been created already */
+      if( ssl->session_negotiate->id_len == 0 )
+      {
 
         /* Creating a session id with 32 byte length */
         if( ( ret = ssl->conf->f_rng( ssl->conf->p_rng, ssl->session_negotiate->id, 32 ) ) != 0 )
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "creating session id failed", ret );
-            return( ret );
+          MBEDTLS_SSL_DEBUG_RET( 1, "creating session id failed", ret );
+          return( ret );
         }
-    }
+      }
 
-    ssl->session_negotiate->id_len = 32;
+      ssl->session_negotiate->id_len = 32;
+    }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
     return( 0 );
@@ -1686,21 +1765,39 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
      * ( i.e., a zero-valued single byte length field ).
      */
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-    if( buflen < ( ssl->session_negotiate->id_len + 1 ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
-        return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
-    }
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+        {
+            if( buflen < ( ssl->session_negotiate->id_len + 1 ) )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
+                return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+            }
 
-    *buf++ = (unsigned char)ssl->session_negotiate->id_len; /* write session id length */
-    memcpy( buf, ssl->session_negotiate->id, ssl->session_negotiate->id_len ); /* write session id */
+            *buf++ = (unsigned char)ssl->session_negotiate->id_len; /* write session id length */
+            memcpy( buf, ssl->session_negotiate->id, ssl->session_negotiate->id_len ); /* write session id */
 
-    buf += ssl->session_negotiate->id_len;
-    buflen -= ssl->session_negotiate->id_len;
+            buf += ssl->session_negotiate->id_len;
+            buflen -= ssl->session_negotiate->id_len;
 
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %d", ssl->session_negotiate->id_len ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %d", ssl->session_negotiate->id_len ) );
+            MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+        }
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        else
+        {
+            if( buflen < 1 )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
+                return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+            }
+
+            *buf++ = 0; /* session id length set to zero */
+            buflen -= 1;
+        }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 #else
 #if defined(MBEDTLS_SSL_TLS13_CTLS)
     /* For cTLS we are not using a session id */
@@ -1874,6 +1971,15 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
     ssl_write_cid_ext( ssl, buf, end, &cur_ext_len );
     total_ext_len += cur_ext_len;
     buf += cur_ext_len;
+#endif
+
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        ssl_write_quic_transport_parameters_ext( ssl, buf, end, &cur_ext_len );
+        total_ext_len += cur_ext_len;
+        buf += cur_ext_len;
+    }
 #endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
@@ -2137,6 +2243,40 @@ int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
     return( ssl->early_data_status );
 }
 #endif /* MBEDTLS_ZERO_RTT */
+
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+
+/* QUIC transport parameters extensions. [draft-ietf-quic-tls 8.2]
+ *
+ *  QUIC transport parameters are carried in a TLS extension. Different
+ *  versions of QUIC might define a different method for negotiating
+ *  transport configuration.
+ *
+ *  Including transport parameters in the TLS handshake provides
+ *  integrity protection for these values.
+ *
+ *  QUIC transport parameters MUST be included in the ServerHello handshake message.
+ *
+ *  enum {
+ *     quic_transport_parameters(0xffa5), (65535)
+ *  } ExtensionType;
+ *
+ */
+static int ssl_parse_quic_transport_parameters_ext(mbedtls_ssl_context *ssl,
+	const unsigned char *buf, size_t len)
+{
+    // We are not expecting peer transport params to be communicated
+    // more than once.
+    if (ssl->peer_quic_transport_params != NULL)
+    {
+        return MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
+    }
+
+    return ssl_set_quic_transport_params(ssl, buf, len,
+            &ssl->peer_quic_transport_params, &ssl->peer_quic_transport_params_len);
+}
+
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
 #if ( defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) )
 
@@ -2847,6 +2987,18 @@ static int ssl_encrypted_extensions_parse( mbedtls_ssl_context* ssl,
                 break;
 #endif /* MBEDTLS_ZERO_RTT */
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+            case MBEDTLS_TLS_EXT_QUIC_TRANSPORT_PARAMS:
+                MBEDTLS_SSL_DEBUG_MSG(3, ("found quic_transport_parameters extension"));
+
+                if ((ret =  ssl_parse_quic_transport_parameters_ext(ssl, ext + 4, (size_t)ext_size)) != 0)
+                {
+                    MBEDTLS_SSL_DEBUG_RET(1, "ssl_parse_quic_transport_parameters_ext", ret);
+                    return(ret);
+                }
+                break;
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
             default:
                 MBEDTLS_SSL_DEBUG_MSG( 3, ( "unknown extension found: %d ( ignoring )", ext_id ) );
         }
@@ -3128,8 +3280,8 @@ cleanup:
 #endif /* MBEDTLS_SSL_USE_MPS */
 
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
-                                   const unsigned char* buf,
-                                   size_t buflen )
+        const unsigned char* buf,
+        size_t buflen )
 {
 
     int ret; /* return value */
@@ -3159,7 +3311,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message - min size not reached" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
     }
@@ -3183,7 +3335,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message - min size not reached" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
     }
@@ -3201,14 +3353,14 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_BUF( 3, "server hello, version", buf + 0, 2 );
         mbedtls_ssl_read_version( &ssl->major_ver, &ssl->minor_ver,
-                                  ssl->conf->transport, buf + 0 );
+                ssl->conf->transport, buf + 0 );
 
         /* The version field in the ServerHello must contain 0x303 */
         if( buf[0] != 0x03 || buf[1] != 0x03 )
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "Unsupported version of TLS." ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION,
-                                  MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION );
+                    MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION );
             return( MBEDTLS_ERR_SSL_BAD_HS_PROTOCOL_VERSION );
         }
 
@@ -3245,30 +3397,51 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        /* legacy_session_id_echo */
-        if( ssl->session_negotiate->id_len != buf[0] )
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id length" ) );
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-            return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-        }
-        buf++; /* skip session id length */
+            /* legacy_session_id_echo */
+            if( ssl->session_negotiate->id_len != buf[0] )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id length" ) );
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                        MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+            }
+            buf++; /* skip session id length */
 
-        if( memcmp( ssl->session_negotiate->id, &buf[0], ssl->session_negotiate->id_len ) != 0 )
+            if( memcmp( ssl->session_negotiate->id, &buf[0], ssl->session_negotiate->id_len ) != 0 )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id" ) );
+                MBEDTLS_SSL_DEBUG_BUF( 3, "- expected session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+                MBEDTLS_SSL_DEBUG_BUF( 3, "- received session id", &buf[0], ssl->session_negotiate->id_len );
+
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                        MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+            }
+            buf += ssl->session_negotiate->id_len; /* skip session id */
+
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
+            MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+        }
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        else
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id" ) );
-            MBEDTLS_SSL_DEBUG_BUF( 3, "- expected session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-            MBEDTLS_SSL_DEBUG_BUF( 3, "- received session id", &buf[0], ssl->session_negotiate->id_len );
-
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
-            return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+            /* Length of the session id must be zero */
+            if( *buf == 0 )
+            {
+                buf++; /* skip session id length */
+            }
+            else
+            {
+                SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                        MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+            }
         }
-        buf += ssl->session_negotiate->id_len; /* skip session id */
-
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 #else
         /* Length of the session id must be zero */
         if( *buf == 0 )
@@ -3278,7 +3451,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         else
         {
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
@@ -3314,7 +3487,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+                MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -3327,7 +3500,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
@@ -3344,12 +3517,12 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
         if( ssl->conf->ciphersuite_list[ssl->minor_ver][i++] ==
-            ssl->session_negotiate->ciphersuite )
+                ssl->session_negotiate->ciphersuite )
         {
             break;
         }
@@ -3365,7 +3538,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
@@ -3379,7 +3552,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
@@ -3391,7 +3564,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
@@ -3410,7 +3583,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
@@ -3525,6 +3698,13 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake_key_derivation", ret );
         return( ret );
     }
+
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        mbedtls_set_quic_traffic_key(ssl, MBEDTLS_SSL_CRYPTO_LEVEL_HANDSHAKE);
+    }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
     ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_handshake, 0 );
     if( ret != 0 )
@@ -3714,30 +3894,51 @@ static int ssl_hrr_parse( mbedtls_ssl_context* ssl,
 #endif /* MBEDTLS_SSL_TLS13_CTLS */
     {
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-        /* legacy_session_id_echo */
-        if( ssl->session_negotiate->id_len != buf[0] )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id length" ) );
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
-            return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
-        }
-        buf++; /* skip session id length */
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+      if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+      {
+          /* legacy_session_id_echo */
+          if( ssl->session_negotiate->id_len != buf[0] )
+          {
+              MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id length" ) );
+              SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                      MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+              return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+          }
+          buf++; /* skip session id length */
 
-        if( memcmp( ssl->session_negotiate->id, &buf[0], ssl->session_negotiate->id_len ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id" ) );
-            MBEDTLS_SSL_DEBUG_BUF( 3, "- expected session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
-            MBEDTLS_SSL_DEBUG_BUF( 3, "- received session id", &buf[0], ssl->session_negotiate->id_len );
+          if( memcmp( ssl->session_negotiate->id, &buf[0], ssl->session_negotiate->id_len ) != 0 )
+          {
+              MBEDTLS_SSL_DEBUG_MSG( 1, ( "Mismatch of session id" ) );
+              MBEDTLS_SSL_DEBUG_BUF( 3, "- expected session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+              MBEDTLS_SSL_DEBUG_BUF( 3, "- received session id", &buf[0], ssl->session_negotiate->id_len );
 
-            SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                                  MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
-            return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
-        }
-        buf += ssl->session_negotiate->id_len; /* skip session id */
+              SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                      MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+              return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+          }
+          buf += ssl->session_negotiate->id_len; /* skip session id */
 
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
-        MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+          MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id length ( %d )", ssl->session_negotiate->id_len ) );
+          MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+      }
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+      else
+      {
+          /* Length of the session id must be zero */
+          if( *buf == 0 )
+          {
+              buf++; /* skip session id length */
+          }
+          else
+          {
+              SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
+                      MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+              return( MBEDTLS_ERR_SSL_BAD_HS_HELLO_RETRY_REQUEST );
+          }
+      }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 #else
         /* Length of the session id must be zero */
         if( *buf == 0 )
@@ -4134,6 +4335,25 @@ static void mbedtls_patch_pointers( mbedtls_ssl_context* ssl )
 /*
  * TLS and DTLS 1.3 State Maschine -- client side
  */
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+static int ssl_handshake_state_requires_input(int state)
+{
+    switch (state)
+    {
+        case MBEDTLS_SSL_SERVER_HELLO:
+        case MBEDTLS_SSL_SECOND_SERVER_HELLO:
+        case MBEDTLS_SSL_ENCRYPTED_EXTENSIONS:
+        case MBEDTLS_SSL_CERTIFICATE_REQUEST:
+        case MBEDTLS_SSL_SERVER_CERTIFICATE:
+        case MBEDTLS_SSL_CERTIFICATE_VERIFY:
+        case MBEDTLS_SSL_SERVER_FINISHED:
+            return 1;
+        default:
+            return 0;
+    }
+}
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 {
     int ret = 0;
@@ -4147,6 +4367,27 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if ((ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+            && ssl_handshake_state_requires_input(ssl->state))
+    {
+        uint8_t msg_type = 0; // Sentinel value for debugging.
+        size_t msg_size = 0;
+        size_t available_len = 0;
+        if ((ret = mbedtls_quic_input_peek(ssl, ssl->quic_hs_crypto_level,
+                        &msg_type, &msg_size, &available_len)) != 0)
+        {
+            // We are not ready to consume a message.
+            // The `ret` is either "MBEDTLS_ERR_SSL_WANT_READ", in which
+            // case more data is required, or some other error code
+            // that should be surfaced to the callsite.
+            MBEDTLS_SSL_DEBUG_MSG(1,
+                    ("mbedtls_quic_input_peek: ret: %d type: %hhu size: %u len: %u",
+                     ret, msg_type, msg_size, available_len));
+            return ret;
+        }
+    }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
@@ -4165,9 +4406,14 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
             ssl->handshake->hello_retry_requests_received = 0;
 
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
-            /* Reset session id */
-            memset( ssl->session_negotiate->id, 0, 32 );
-            ssl->session_negotiate->id_len = 0;
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+            if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+            {
+                /* Reset session id */
+                memset( ssl->session_negotiate->id, 0, 32 );
+                ssl->session_negotiate->id_len = 0;
+            }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
 
 #if defined(MBEDTLS_ECP_C)
@@ -4320,16 +4566,21 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
                 if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
                     mbedtls_ack_add_record( ssl, MBEDTLS_SSL_HS_HELLO_RETRY_REQUEST, MBEDTLS_SSL_ACK_RECORDS_RECEIVED );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
+                int state = MBEDTLS_SSL_SECOND_CLIENT_HELLO;
 #if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE)
                 /* If not offering early data, the client sends a dummy
                  * change_cipher_spec record immediately before its
                  * second flight. This may either be before its second
                  * ClientHello or before its encrypted handshake flight.
                  */
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO );
-#else
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+                if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+                {
+                    state = MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO;
+                }
 #endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE */
+                mbedtls_ssl_handshake_set_state( ssl, state );
             }
             else
             {
@@ -4629,6 +4880,67 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
     return( ret );
 }
+
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+
+int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
+{
+    MBEDTLS_ASSERT(
+            ssl->quic_hs_crypto_level == MBEDTLS_SSL_CRYPTO_LEVEL_APPLICATION);
+
+    uint8_t msg_type;
+    size_t msg_size = 0;
+    size_t available_len = 0;
+    int ret = 0;
+
+    if ((ret = mbedtls_quic_input_peek(ssl, ssl->quic_hs_crypto_level,
+                    &msg_type, &msg_size, &available_len)) != 0)
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_quic_input_peek", ret);
+        return(ret);
+    }
+
+    if (available_len != msg_size)
+    {
+        return MBEDTLS_ERR_SSL_WANT_READ;
+    }
+
+    if ((ret = mbedtls_ssl_read_record(ssl, 0)) != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_read_record", ret);
+        return(ret);
+    }
+
+    if (ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET)
+    {
+        MBEDTLS_SSL_DEBUG_MSG(3, ("NewSessionTicket received"));
+
+        if ((ret = mbedtls_ssl_new_session_ticket_process(ssl)) != 0)
+        {
+            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_parse_new_session_ticket", ret);
+            return(ret);
+        }
+        mbedtls_ssl_ticket* ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_ticket));
+        if (ticket == NULL)
+        {
+            return (MBEDTLS_ERR_SSL_ALLOC_FAILED);
+        }
+        if ((mbedtls_ssl_get_client_ticket(ssl, ticket) != 0))
+        {
+            mbedtls_free(ticket->ticket);
+            mbedtls_free(ticket);
+            return (MBEDTLS_ERR_SSL_INTERNAL_ERROR);
+        }
+        // the ticket will be transfered to and be released by the app
+        ssl->quic_method->process_new_session(
+                ssl->p_quic_method,
+                ticket);
+        return (ret);
+    }
+
+    return 0;
+}
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 #endif /* MBEDTLS_SSL_CLI_C */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
