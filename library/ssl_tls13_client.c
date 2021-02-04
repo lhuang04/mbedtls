@@ -1705,6 +1705,17 @@ static int ssl_client_hello_write_partial( mbedtls_ssl_context* ssl,
             buf += ssl->session_negotiate->id_len;
             buflen -= ssl->session_negotiate->id_len;
 
+            MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %d", ssl->session_negotiate->id_len ) );
+            MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
+        }
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        else
+        {
+            if( buflen < 1 )
+            {
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small to hold ClientHello" ) );
+                return( MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL );
+            }
 
             MBEDTLS_SSL_DEBUG_MSG( 3, ( "session id len.: %d", ssl->session_negotiate->id_len ) );
             MBEDTLS_SSL_DEBUG_BUF( 3, "session id", ssl->session_negotiate->id, ssl->session_negotiate->id_len );
@@ -3204,8 +3215,8 @@ static int ssl_server_hello_session_id_check( mbedtls_ssl_context* ssl,
 }
 
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
-                                   const unsigned char* buf,
-                                   size_t buflen )
+        const unsigned char* buf,
+        size_t buflen )
 {
 
     int ret; /* return value */
@@ -3305,7 +3316,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+                MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
