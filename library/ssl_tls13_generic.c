@@ -1834,16 +1834,6 @@ int mbedtls_ssl_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
-        /* TEMPORARY:
-         * As long as we don't write _all_ messages through MPS, we manually
-         * need to keep the sequence numbers in sync. */
-        {
-            unsigned i;
-            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
-                if( ++ssl->cur_out_ctr[i - 1] != 0 )
-                    break;
-        }
-
 #else  /* MBEDTLS_SSL_USE_MPS */
 
         /* Make sure we can write a new message. */
@@ -2649,15 +2639,6 @@ int mbedtls_ssl_write_certificate_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
-        /* TEMPORARY:
-         * As long as we don't write _all_ messages through MPS, we manually
-         * need to keep the sequence numbers in sync. */
-        {
-            unsigned i;
-            for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
-                if( ++ssl->cur_out_ctr[i - 1] != 0 )
-                    break;
-        }
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -4224,16 +4205,6 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
-
-    /* TEMPORARY:
-     * As long as we don't write _all_ messages through MPS, we manually
-     * need to keep the sequence numbers in sync. */
-    {
-        unsigned i;
-        for( i = 8; i > mbedtls_ssl_ep_len( ssl ); i-- )
-            if( ++ssl->cur_out_ctr[i - 1] != 0 )
-                break;
-    }
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
