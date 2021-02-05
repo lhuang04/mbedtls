@@ -1483,6 +1483,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384 with ECDHE-ECDSA (server auth only)
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_disabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_256_GCM_SHA384 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1500,6 +1501,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_disabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1517,6 +1519,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256, ext PSK, early data" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_disabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_GCM_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1534,6 +1537,7 @@ run_test    "TLS 1.3, TLS_AES_128_GCM_SHA256, ext PSK, early data" \
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
 requires_config_disabled MBEDTLS_RSA_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 run_test    "TLS 1.3, TLS_AES_128_CCM_8_SHA256, ext PSK, early data" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
             "$P_CLI debug_level=5 force_version=tls1_3 force_ciphersuite=TLS_AES_128_CCM_8_SHA256 key_exchange_modes=psk early_data=1 psk=010203 psk_identity=0a0b0c" \
@@ -1587,6 +1591,7 @@ run_test    "TLS 1.3, TLS_AES_128_CCM_SHA256 with ECDHE-ECDSA, SRV auth, HRR enf
 # test early data status - not sent
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - not sent" \
             "$P_SRV debug_level=5 force_version=tls1_3 psk=010203 psk_identity=0a0b0c" \
@@ -1597,6 +1602,7 @@ run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - not s
 # test early data status - accepted
 requires_config_enabled MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
 requires_config_enabled MBEDTLS_DEBUG_C
+requires_config_enabled MBEDTLS_ZERO_RTT
 requires_config_disabled MBEDTLS_RSA_C
 run_test    "TLS 1.3, TLS_AES_256_GCM_SHA384, ext PSK, early data status - accepted" \
             "$P_SRV debug_level=5 force_version=tls1_3 early_data=1 key_exchange_modes=psk psk=010203 psk_identity=0a0b0c" \
