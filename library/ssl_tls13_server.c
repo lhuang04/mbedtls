@@ -1663,8 +1663,6 @@ static int ssl_write_new_session_ticket_write( mbedtls_ssl_context* ssl,
   * Overview
   */
 
-#if defined(MBEDTLS_ZERO_RTT)
-
   /* Main state-handling entry point; orchestrates the other functions. */
 int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl );
 
@@ -1690,6 +1688,8 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_read_end_of_early_data_coordinate( ssl ) );
     if( ret == SSL_END_OF_EARLY_DATA_EXPECT )
     {
+#if defined(MBEDTLS_ZERO_RTT)
+
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( ssl_end_of_early_data_fetch( ssl ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
@@ -1700,6 +1700,14 @@ int ssl_read_end_of_early_data_process( mbedtls_ssl_context* ssl )
 #else /* MBEDTLS_SSL_USE_MPS */
         MBEDTLS_SSL_PROC_CHK( ssl_end_of_early_data_fetch( ssl ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
+
+#else /* MBEDTLS_ZERO_RTT */
+
+        /* Should never happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+#endif /* MBEDTLS_ZERO_RTT */
+
     }
 
     /* Postprocessing step: Update state machine */
@@ -1711,6 +1719,8 @@ cleanup:
     return( ret );
 
 }
+
+#if defined(MBEDTLS_ZERO_RTT)
 
 #if defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_end_of_early_data_fetch( mbedtls_ssl_context *ssl )
@@ -1767,9 +1777,12 @@ cleanup:
 }
 #endif /* MBEDTLS_SSL_USE_MPS */
 
+#endif /* MBEDTLS_ZERO_RTT */
+
 #if !defined(MBEDTLS_ZERO_RTT)
 static int ssl_read_end_of_early_data_coordinate( mbedtls_ssl_context* ssl )
 {
+    ((void) ssl);
     return( SSL_END_OF_EARLY_DATA_SKIP );
 }
 #else /* MBEDTLS_ZERO_RTT */
@@ -1787,7 +1800,6 @@ static int ssl_read_end_of_early_data_postprocess( mbedtls_ssl_context* ssl )
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_CLIENT_CERTIFICATE );
     return ( 0 );
 }
-#endif /* MBEDTLS_ZERO_RTT */
 
 /*
  *
@@ -1816,10 +1828,12 @@ static int ssl_early_data_fetch( mbedtls_ssl_context* ssl,
 
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl );
 
+#if defined(MBEDTLS_ZERO_RTT)
 /* Parse early data send by the peer. */
 static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
     unsigned char const* buf,
     size_t buflen );
+#endif /* MBEDTLS_ZERO_RTT */
 
 /* Update the state after handling the incoming early data message. */
 static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl );
@@ -1837,6 +1851,7 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
 
     if( ret == SSL_EARLY_DATA_EXPECT )
     {
+#if defined(MBEDTLS_ZERO_RTT)
         unsigned char *buf;
         size_t buflen;
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -1862,6 +1877,13 @@ int ssl_read_early_data_process( mbedtls_ssl_context* ssl )
 
         /* No state machine update at this point -- we might receive
          * multiple 0-RTT messages. */
+
+#else /* MBEDTLS_ZERO_RTT */
+
+        /* Should never happen */
+        return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+
+#endif /* MBEDTLS_ZERO_RTT */
     }
     else
     {
@@ -1923,6 +1945,7 @@ cleanup:
 #if !defined(MBEDTLS_ZERO_RTT)
 static int ssl_read_early_data_coordinate( mbedtls_ssl_context* ssl )
 {
+    ((void) ssl);
     return( SSL_EARLY_DATA_SKIP );
 }
 #else /* MBEDTLS_ZERO_RTT */
@@ -1970,7 +1993,6 @@ cleanup:
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 }
-#endif /* MBEDTLS_ZERO_RTT */
 
 static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
                                       unsigned char const* buf,
@@ -1997,6 +2019,7 @@ static int ssl_read_early_data_parse( mbedtls_ssl_context* ssl,
 
     return( 0 );
 }
+#endif /* MBEDTLS_ZERO_RTT */
 
 static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl )
 {
@@ -3219,14 +3242,14 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_early_data_keys", ret );
-            goto cleanup;
+            return( ret );
         }
 
         ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys, ssl->transform_earlydata, 0 );
         if( ret != 0 )
         {
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-            goto cleanup;
+            return( ret );
         }
 
 #if defined(MBEDTLS_SSL_USE_MPS)
@@ -3248,17 +3271,14 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         }
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
+
+    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
+
 #endif /* MBEDTLS_ZERO_RTT */
 
     mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
+    return( 0 );
 
-#if defined(MBEDTLS_ZERO_RTT)
-cleanup:
-
-    mbedtls_platform_zeroize( &traffic_keys, sizeof( traffic_keys ) );
-#endif /* MBEDTLS_ZERO_RTT */
-
-    return( ret );
 }
 
 
@@ -4830,13 +4850,9 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
             break;
 
-#if defined(MBEDTLS_ZERO_RTT)
-
         case MBEDTLS_SSL_END_OF_EARLY_DATA:
             ret = ssl_read_end_of_early_data_process( ssl );
             break;
-
-#endif /* MBEDTLS_ZERO_RTT */
 
             /* ----- READ FINISHED ----*/
 
