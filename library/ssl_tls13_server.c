@@ -1947,12 +1947,19 @@ static int ssl_read_early_data_postprocess( mbedtls_ssl_context* ssl )
 
 /* Main entry point from the state machine; orchestrates the otherfunctions. */
 static int ssl_client_hello_process( mbedtls_ssl_context* ssl );
+
+#if defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
-                                  unsigned char** buf,
-                                  size_t* buflen );
+                                   mbedtls_mps_handshake_in *msg );
+#else
+static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
+                                   unsigned char** buf,
+                                   size_t* buflen );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
-                                  unsigned char* buf,
-                                  size_t buflen );
+                                   unsigned char* buf,
+                                   size_t buflen );
 
 /* Update the handshake state machine */
 /* TODO: At the moment, this doesn't update the state machine - why? */
@@ -1968,11 +1975,33 @@ static int ssl_client_hello_process( mbedtls_ssl_context* ssl )
     int ret;
     unsigned char* buf = NULL;
     size_t buflen = 0;
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_in msg;
+#endif /* MBEDTLS_SSL_USE_MPS */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse client hello" ) );
 
-    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &buf, &buflen ) );
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &msg ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                                                  msg.length,
+                                                  &buf,
+                                                  NULL ) );
+    buflen = msg.length;
+
+    mbedtls_ssl_add_hs_hdr_to_checksum( ssl,
+                  MBEDTLS_SSL_HS_CLIENT_HELLO, msg.length );
 
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_parse( ssl, buf, buflen ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_fetch( ssl, &buf, &buflen ) );
+    MBEDTLS_SSL_PROC_CHK( ssl_client_hello_parse( ssl, buf, buflen ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "postprocess" ) );
     MBEDTLS_SSL_PROC_CHK( ssl_client_hello_postprocess( ssl ) );
@@ -1988,9 +2017,33 @@ cleanup:
     return( ret );
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+
 static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
-                                  unsigned char** dst,
-                                  size_t* dstlen )
+                                   mbedtls_mps_handshake_in *msg )
+{
+    int ret;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read( &ssl->mps.l4 ) );
+    if( ret != MBEDTLS_MPS_MSG_HS )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                                                      msg ) );
+
+    if( msg->type != MBEDTLS_SSL_HS_CLIENT_HELLO )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+cleanup:
+
+    return( ret );
+}
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
+static int ssl_client_hello_fetch( mbedtls_ssl_context* ssl,
+                                   unsigned char** dst,
+                                   size_t* dstlen )
 {
     int ret;
     unsigned char* buf;
@@ -2212,6 +2265,8 @@ read_record_header:
     return( 0 );
 }
 
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 static void ssl_debug_print_client_hello_exts( mbedtls_ssl_context *ssl )
 {
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Extensions:" ) );
@@ -2419,8 +2474,10 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
      *    ..  .  ..   extensions ( optional )
      */
 
-    buf += mbedtls_ssl_hs_hdr_len( ssl );
+#if !defined(MBEDTLS_SSL_USE_MPS)
+    buf    += mbedtls_ssl_hs_hdr_len( ssl );
     buflen -= mbedtls_ssl_hs_hdr_len( ssl );
+#endif /* MBEDTLS_SSL_USE_MPS */
 
     /* TBD: Needs to be updated due to mandatory extensions
      * Minimal length ( with everything empty and extensions ommitted ) is
@@ -3038,13 +3095,6 @@ static int ssl_client_hello_parse( mbedtls_ssl_context* ssl,
 static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl )
 {
     int ret = 0;
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Disable unencrypted inbound traffic" ) );
-    ret = mbedtls_mps_set_incoming_keys( &ssl->mps.l4, MBEDTLS_MPS_EPOCH_NONE );
-    if( ret != 0 )
-        return( ret );
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_ZERO_RTT)
     mbedtls_ssl_key_set traffic_keys;
