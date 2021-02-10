@@ -2894,10 +2894,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl );
 #define SSL_CERTIFICATE_SKIP       1
 static int ssl_read_certificate_coordinate( mbedtls_ssl_context* ssl );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_certificate_fetch( mbedtls_ssl_context* ssl,
-                                       mbedtls_mps_handshake_in *msg );
-#else
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_certificate_fetch( mbedtls_ssl_context* ssl,
                                        unsigned char** buf,
                                        size_t* buflen );
@@ -2936,14 +2933,10 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         size_t buflen;
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        mbedtls_mps_handshake_in msg;
 
-        MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_fetch( ssl, &msg ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                      msg.length,
-                                                      &buf,
-                                                      NULL ) );
-        buflen = msg.length;
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_fetch_full_hs_msg( ssl,
+                                          MBEDTLS_SSL_HS_CERTIFICATE,
+                                          &buf, &buflen ) );
 
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE, buf, buflen );
@@ -2953,8 +2946,7 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
 
@@ -2989,28 +2981,7 @@ cleanup:
     return( ret );
 }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
-                                       mbedtls_mps_handshake_in *msg )
-{
-    int ret;
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps.l4 ) );
-
-    if( ret != MBEDTLS_MPS_MSG_HS )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
-
-    if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE )
-        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
-
-cleanup:
-
-    return( ret );
-}
-#else /* MBEDTLS_SSL_USE_MPS */
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
                                        unsigned char **buf,
                                        size_t *buflen )
