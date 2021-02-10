@@ -4592,6 +4592,7 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "server state: %d", ssl->state ) );
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );
 
@@ -4603,6 +4604,8 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
             return( ret );
     }
 #endif
+#endif /* !MBEDTLS_SSL_USE_MPS */
+
     switch ( ssl->state )
     {
         /* start state */
