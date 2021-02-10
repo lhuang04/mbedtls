@@ -1427,6 +1427,10 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
                                                          buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+
+        MBEDTLS_SSL_PROC_CHK(
+            ssl_write_new_session_ticket_postprocess( ssl ) );
+
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -1440,10 +1444,16 @@ static int ssl_write_new_session_ticket_process( mbedtls_ssl_context *ssl )
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
+        MBEDTLS_SSL_PROC_CHK(
+            ssl_write_new_session_ticket_postprocess( ssl ) );
+
 #endif /* MBEDTLS_SSL_USE_MPS */
     }
-
-    MBEDTLS_SSL_PROC_CHK( ssl_write_new_session_ticket_postprocess( ssl ) );
+    else
+    {
+        MBEDTLS_SSL_PROC_CHK(
+            ssl_write_new_session_ticket_postprocess( ssl ) );
+    }
 
 cleanup:
 
@@ -3382,7 +3392,9 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -3398,6 +3410,9 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_BUF( 3, "EncryptedExtensions", ssl->out_msg, ssl->out_msglen );
 
+    /* Update state */
+    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
+
     /* Dispatch message */
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
@@ -3411,9 +3426,6 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
      *       this function again on retry. */
 
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    /* Update state */
-    MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_postprocess( ssl ) );
 
 cleanup:
 
@@ -3684,6 +3696,9 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+
+    MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_postprocess( ssl ) );
+
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -3695,11 +3710,11 @@ static int ssl_write_hello_retry_request_process( mbedtls_ssl_context *ssl )
                               MBEDTLS_SSL_MAX_CONTENT_LEN,
                               &ssl->out_msglen ) );
 
+    MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_postprocess( ssl ) );
+
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
-
-    MBEDTLS_SSL_PROC_CHK( ssl_write_hello_retry_request_postprocess( ssl ) );
 
 cleanup:
 
@@ -4030,7 +4045,9 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
                                                              buf_len - msg_len ) );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+    /* Postprocess */
+    MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -4047,12 +4064,6 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
     ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
     ssl->out_msg[0] = MBEDTLS_SSL_HS_SERVER_HELLO;
 
-    /* Dispatch */
-
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
     /* Postprocess */
     MBEDTLS_SSL_PROC_CHK( ssl_server_hello_postprocess( ssl ) );
 
@@ -4064,6 +4075,11 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl ) {
      *       returns WANT_WRITE, we want the handshake state
      *       to be updated in order to not enter
      *       this function again on retry. */
+
+    /* Dispatch */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 cleanup:
 
@@ -4400,7 +4416,9 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
                                                                  buf_len - msg_len ) );
 
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
 
@@ -4415,13 +4433,14 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         ssl->out_msgtype = MBEDTLS_SSL_MSG_HANDSHAKE;
         ssl->out_msg[0] = MBEDTLS_SSL_HS_CERTIFICATE_REQUEST;
 
+        /* Update state */
+        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
+
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_handshake_msg( ssl ) );
 
 #endif /* MBEDTLS_SSL_USE_MPS */
 
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_postprocess( ssl ) );
     }
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
