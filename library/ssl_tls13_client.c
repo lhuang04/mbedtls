@@ -2439,7 +2439,6 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         return( ret );
     }
-    ssl->keep_current_message = 1;
 
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
@@ -2452,6 +2451,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
     {
         return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
     }
+    ssl->keep_current_message = 1;
 
     return( SSL_CERTIFICATE_REQUEST_SKIP );
 }
