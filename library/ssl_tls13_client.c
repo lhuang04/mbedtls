@@ -56,6 +56,10 @@
 #include <time.h>
 #endif
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+#include <mbedtls/quic_internal.h>
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 
 #if (defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C))
 
@@ -2524,7 +2528,7 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, &msg ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, &msg, NULL ) );
 
     if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
         return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
@@ -2547,7 +2551,7 @@ static int ssl_certificate_request_fetch( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, msg ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, msg, NULL ) );
 
     if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
     {
@@ -2856,7 +2860,7 @@ static int ssl_encrypted_extensions_fetch( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, msg ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, msg, NULL ) );
 
     if( msg->type != MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION )
     {
@@ -3229,17 +3233,44 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_SERVER_HELLO )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    /* TODO: Handle the case of incoming record fragmentation. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg->handle,
-                                                  msg->length,
-                                                  &peak,
-                                                  NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        peak = mbedtls_calloc( 1, msg->length );
+        size_t len = mbedtls_quic_input_read(
+                ssl, ssl->quic_hs_crypto_level, peak, msg->length);
+        if ( len == 0 )
+        {
+            mbedtls_free( peak );
+            return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        /* TODO: Handle the case of incoming record fragmentation. */
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg->handle,
+                    msg->length,
+                    &peak,
+                    NULL ) );
+    }
+
     if( ssl_server_hello_is_hrr( peak ) )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "received HelloRetryRequest message" ) );
@@ -4869,6 +4900,14 @@ int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
         return MBEDTLS_ERR_SSL_WANT_READ;
     }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    mbedtls_mps_handshake_in msg;
+    ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg, NULL );
+    if( ret != 0 )                       
+      return( ret );                   
+
+    if (msg.type == MBEDTLS_SSL_HS_NEW_SESSION_TICKET)
+#else /* MBEDTLS_SSL_USE_MPS */
     if ((ret = mbedtls_ssl_read_record(ssl, 0)) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_read_record", ret);
@@ -4876,6 +4915,7 @@ int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
     }
 
     if (ssl->in_msg[0] == MBEDTLS_SSL_HS_NEW_SESSION_TICKET)
+#endif /* MBEDTLS_SSL_USE_MPS */
     {
         MBEDTLS_SSL_DEBUG_MSG(3, ("NewSessionTicket received"));
 

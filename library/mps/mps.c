@@ -988,6 +988,12 @@ int mbedtls_mps_read( mbedtls_mps *mps )
     mbedtls_mps_msg_type_t msg;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if ( mode == MBEDTLS_MPS_MODE_QUIC )
+    {
+        return( MBEDTLS_MPS_MSG_HS );
+    }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mbedtls_mps_read" );
 
@@ -1248,13 +1254,28 @@ int mbedtls_mps_read_check( mbedtls_mps const *mps )
     return( mps->in.state );
 }
 
+int quic_input_peek(
+    mbedtls_ssl_context       *ssl,
+    quic_input_queue          *input,
+    uint8_t                   *otype,
+    size_t                    *osize,
+    size_t                    *olen);
+
 int mbedtls_mps_read_handshake( mbedtls_mps *mps,
-                                mbedtls_mps_handshake_in *hs )
+                                mbedtls_mps_handshake_in *hs,
+                                quic_input_queue *queue )
 {
     int ret;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
     TRACE_INIT( "mbedtls_mps_read_handshake" );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if ( mode == MBEDTLS_MPS_MODE_QUIC )
+    {
+        size_t available_len = 0;
+        return quic_input_peek(NULL, queue, &hs->type, &hs->length, &available_len);
+    }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
     ret = mps_check_read( mps );
     if( ret != 0 )
@@ -1391,6 +1412,12 @@ int mbedtls_mps_read_consume( mbedtls_mps *mps )
     int ret;
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_conf_get_mode( &mps->conf );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if ( mode == MBEDTLS_MPS_MODE_QUIC )
+    {
+        return( 0 );
+    }
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
     mps_l3* const l3 = mbedtls_mps_l4_get_l3( mps );
     TRACE_INIT( "mbedtls_mps_read_consume" );
 

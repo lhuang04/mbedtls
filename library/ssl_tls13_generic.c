@@ -2282,7 +2282,7 @@ static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
+                                                      msg, NULL ) );
 
     if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE_VERIFY )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -2990,7 +2990,7 @@ static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
+                                                      msg, NULL ) );
 
     if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -4611,7 +4611,7 @@ static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
+                                                      msg, NULL ) );
 
     if( msg->type != MBEDTLS_SSL_HS_FINISHED )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -5000,7 +5000,7 @@ static int ssl_new_session_ticket_fetch( mbedtls_ssl_context *ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg ) );
+                                                      msg, NULL ) );
 
     if( msg->type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );

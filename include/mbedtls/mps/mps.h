@@ -34,6 +34,10 @@
 
 #include "../timing.h"
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+#include "mbedtls/quic.h"
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 struct mbedtls_mps_handshake_out_internal;
 struct mbedtls_mps_retransmission_handle;
 struct mbedtls_mps_recognition_info;
@@ -1359,7 +1363,8 @@ int mbedtls_mps_read_check( mbedtls_mps const *mps );
  *              will silently fail.
  */
 int mbedtls_mps_read_handshake( mbedtls_mps *mps,
-                                mbedtls_mps_handshake_in *msg );
+                                mbedtls_mps_handshake_in *msg,
+                                quic_input_queue *queue );
 
 /**
  * \brief       Get the contents of a pending application data message.

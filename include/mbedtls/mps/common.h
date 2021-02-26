@@ -375,6 +375,8 @@ typedef uint8_t mbedtls_mps_transport_type;
 #define MBEDTLS_MPS_MODE_STREAM   ((mbedtls_mps_transport_type) 0)
  /* MBEDTLS_SSL_TRANSPORT_DATAGRAM */
 #define MBEDTLS_MPS_MODE_DATAGRAM ((mbedtls_mps_transport_type) 1)
+ /* MBEDTLS_SSL_TRANSPORT_QUIC */
+#define MBEDTLS_MPS_MODE_QUIC ((mbedtls_mps_transport_type) 2)
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
 

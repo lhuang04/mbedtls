@@ -5722,7 +5722,7 @@ static int ssl_check_new_session_ticket( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_mps_handshake_in msg;
-    ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg );
+    ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg, NULL );
     if( ret != 0 )
         return( ret );
 
