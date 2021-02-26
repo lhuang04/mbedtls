@@ -59,6 +59,10 @@
 #define mbedtls_free       free
 #endif /* MBEDTLS_PLATFORM_C */
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+#include <mbedtls/quic_internal.h>
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 #if defined(MBEDTLS_SHA256_C)
 static int ssl_calc_finished_tls_sha256( mbedtls_ssl_context*, unsigned char*, int );
 #endif /* MBEDTLS_SHA256_C */
@@ -2281,8 +2285,18 @@ static int ssl_read_certificate_verify_fetch( mbedtls_ssl_context *ssl,
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE_VERIFY )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -2989,8 +3003,18 @@ static int ssl_read_certificate_fetch( mbedtls_ssl_context *ssl,
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -4610,8 +4634,18 @@ static int ssl_read_finished_fetch( mbedtls_ssl_context *ssl,
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_FINISHED )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
@@ -4999,8 +5033,18 @@ static int ssl_new_session_ticket_fetch( mbedtls_ssl_context *ssl,
     if( ret != MBEDTLS_MPS_MSG_HS )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
-                                                      msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_NEW_SESSION_TICKET )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );

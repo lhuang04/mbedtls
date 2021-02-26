@@ -2528,7 +2528,18 @@ static int ssl_certificate_request_coordinate( mbedtls_ssl_context* ssl )
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, &msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    &msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    &msg, NULL ) );
+    }
 
     if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
         return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
@@ -2551,7 +2562,18 @@ static int ssl_certificate_request_fetch( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
     {
@@ -2860,7 +2882,18 @@ static int ssl_encrypted_extensions_fetch( mbedtls_ssl_context* ssl,
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4, msg, NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level)) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    msg, NULL ) );
+    }
 
     if( msg->type != MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION )
     {
@@ -4902,7 +4935,19 @@ int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
 
 #if defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_mps_handshake_in msg;
-    ret = mbedtls_mps_read_handshake( &ssl->mps.l4, &msg, NULL );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        ret = mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    &msg, quic_input_lookup_queue(ssl,ssl->quic_hs_crypto_level));
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        ret = mbedtls_mps_read_handshake( &ssl->mps.l4,
+                    &msg, NULL );
+    }
+
     if( ret != 0 )                       
       return( ret );                   
 
