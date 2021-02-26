@@ -2484,7 +2484,8 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         mbedtls_ssl_add_hs_msg_to_checksum(
             ssl, MBEDTLS_SSL_HS_CERTIFICATE_REQUEST, buf, buflen );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -2873,7 +2874,8 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     mbedtls_ssl_add_hs_msg_to_checksum(
         ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSION, buf, buflen );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -3206,7 +3208,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
         mbedtls_ssl_add_hs_msg_to_checksum( ssl, MBEDTLS_SSL_HS_SERVER_HELLO,
                                             buf, buflen );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 
@@ -3217,7 +3220,8 @@ static int ssl_server_hello_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_hrr_parse( ssl, buf, buflen ) );
 
 #if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4  ) );
 #endif /* MBEDTLS_SSL_USE_MPS */
 

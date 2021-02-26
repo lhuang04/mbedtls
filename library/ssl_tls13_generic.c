@@ -2245,7 +2245,8 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_parse( ssl, buf, buflen,
                                                                  verify_buffer,
                                                                  verify_buffer_len ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -2982,7 +2983,8 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         /* Validate the certificate chain and set the verification results. */
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_validate( ssl ) );
 
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+        if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
         MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -4640,7 +4642,8 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
     /* Parsing step */
     MBEDTLS_SSL_PROC_CHK( ssl_finished_in_parse( ssl, buf, buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
@@ -5052,7 +5055,8 @@ int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
     /* Parsing step */
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_parse( ssl, buf, buflen ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
+    if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_commit_ext( msg.handle ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps.l4 ) );
 
 #else /* MBEDTLS_SSL_USE_MPS */
