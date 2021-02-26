@@ -933,7 +933,7 @@ MBEDTLS_MPS_STATIC int l3_check_write_hs_hdr( mps_l3 *l3 )
 int mps_l3_write_handshake( mps_l3 *l3, mps_l3_handshake_out *out )
 {
     int res;
-    int32_t len;
+    int32_t len = 0;
     mbedtls_mps_l2* const l2 = mbedtls_mps_l3_get_l2( l3 );
     mbedtls_mps_transport_type const mode =
         mbedtls_mps_l3_conf_get_mode( &l3->conf );
