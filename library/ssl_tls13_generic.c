@@ -2219,10 +2219,19 @@ int mbedtls_ssl_read_certificate_verify_process( mbedtls_ssl_context* ssl )
 
 #if defined(MBEDTLS_SSL_USE_MPS)
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_verify_fetch( ssl, &msg ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                      msg.length,
-                                                      &buf,
-                                                      NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+        {
+            MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg.length, &buf) );
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+        {
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                        msg.length,
+                        &buf,
+                        NULL ) );
+        }
         buflen = msg.length;
 
         mbedtls_ssl_add_hs_msg_to_checksum(
@@ -2942,10 +2951,19 @@ int mbedtls_ssl_read_certificate_process( mbedtls_ssl_context* ssl )
         mbedtls_mps_handshake_in msg;
 
         MBEDTLS_SSL_PROC_CHK( ssl_read_certificate_fetch( ssl, &msg ) );
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                      msg.length,
-                                                      &buf,
-                                                      NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+        {
+            MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg.length, &buf) );
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+        {
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                        msg.length,
+                        &buf,
+                        NULL ) );
+        }
         buflen = msg.length;
 
         mbedtls_ssl_add_hs_msg_to_checksum(
@@ -4584,10 +4602,19 @@ int mbedtls_ssl_finished_in_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( ssl_read_finished_fetch( ssl, &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg.length, &buf) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                    msg.length,
+                    &buf,
+                    NULL ) );
+    }
     buflen = msg.length;
 
     mbedtls_ssl_add_hs_msg_to_checksum(
@@ -4990,10 +5017,19 @@ int mbedtls_ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 #if defined(MBEDTLS_SSL_USE_MPS)
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_fetch( ssl, &msg ) );
 
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg.length, &buf) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                    msg.length,
+                    &buf,
+                    NULL ) );
+    }
     buflen = msg.length;
 
     /* Parsing step */

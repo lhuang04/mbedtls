@@ -2461,10 +2461,19 @@ static int ssl_certificate_request_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_fetch( ssl, &msg ) );
 
         /* TODO: Handle the case of incoming record fragmentation. */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                      msg.length,
-                                                      &buf,
-                                                      NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+        if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+        {
+            MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg.length, &buf) );
+        }
+        else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+        {
+            MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                        msg.length,
+                        &buf,
+                        NULL ) );
+        }
         buflen = msg.length;
 
         MBEDTLS_SSL_PROC_CHK( ssl_certificate_request_parse( ssl, buf, buflen ) );
@@ -2841,10 +2850,19 @@ static int ssl_encrypted_extensions_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_fetch( ssl, &msg ) );
 
     /* TODO: Handle the case of incoming record fragmentation. */
-    MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
-                                                  msg.length,
-                                                  &buf,
-                                                  NULL ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg.length, &buf) );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
+        MBEDTLS_SSL_PROC_CHK( mbedtls_reader_get_ext( msg.handle,
+                    msg.length,
+                    &buf,
+                    NULL ) );
+    }
     buflen = msg.length;
 
     MBEDTLS_SSL_PROC_CHK( ssl_encrypted_extensions_parse( ssl, buf, buflen ) );
@@ -3285,9 +3303,7 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_PROTO_QUIC)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
     {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl,
-                    msg->length,
-                    &peak) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl, msg->length, &peak) );
     }
     else
 #endif /* MBEDTLS_SSL_PROTO_QUIC */
