@@ -884,6 +884,8 @@ void mbedtls_ssl_get_peer_quic_transport_params(mbedtls_ssl_context *ssl,
     const uint8_t **params, size_t *len);
 
 int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl);
+
+int mbedtls_quic_get(mbedtls_ssl_context *ssl, size_t length, unsigned char **buffer);
 #endif /* MBEDTLS_SSL_PROTO_QUIC */
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS) && \

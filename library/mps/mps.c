@@ -1273,7 +1273,9 @@ int mbedtls_mps_read_handshake( mbedtls_mps *mps,
     if ( mode == MBEDTLS_MPS_MODE_QUIC )
     {
         size_t available_len = 0;
-        return quic_input_peek(NULL, queue, &hs->type, &hs->length, &available_len);
+        ret = quic_input_peek(NULL, queue, &hs->type, &hs->length, &available_len);
+        hs->length -= 4;
+        return ret;
     }
 #endif /* MBEDTLS_SSL_PROTO_QUIC */
 

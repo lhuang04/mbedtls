@@ -3285,14 +3285,9 @@ static int ssl_server_hello_coordinate( mbedtls_ssl_context* ssl,
 #if defined(MBEDTLS_SSL_PROTO_QUIC)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
     {
-        peak = mbedtls_calloc( 1, msg->length );
-        size_t len = mbedtls_quic_input_read(
-                ssl, ssl->quic_hs_crypto_level, peak, msg->length);
-        if ( len == 0 )
-        {
-            mbedtls_free( peak );
-            return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
+        MBEDTLS_SSL_PROC_CHK( mbedtls_quic_get(ssl,
+                    msg->length,
+                    &peak) );
     }
     else
 #endif /* MBEDTLS_SSL_PROTO_QUIC */

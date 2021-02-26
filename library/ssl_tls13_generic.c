@@ -5612,6 +5612,17 @@ void mbedtls_ssl_get_peer_quic_transport_params(mbedtls_ssl_context *ssl,
     *olen = ssl->peer_quic_transport_params_len;
 }
 
+int mbedtls_quic_get(mbedtls_ssl_context *ssl, size_t length, unsigned char **buffer)
+{
+    size_t len = mbedtls_quic_input_read(
+            ssl, ssl->quic_hs_crypto_level, ssl->in_msg, length + 4);
+    if ( len == 0 )
+    {
+        return ( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+    }
+    *buffer = ssl->in_msg + 4;
+    return 0;
+}
 #endif /* MBEDTLS_SSL_PROTO_QUIC */
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
