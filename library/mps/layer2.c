@@ -1857,6 +1857,7 @@ int l2_in_fetch_protected_record( mbedtls_mps_l2 *ctx, mps_rec *rec )
         RETURN( l2_in_fetch_protected_record_dtls12( ctx, rec ) );
     }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 MBEDTLS_MPS_STATIC
@@ -1904,6 +1905,7 @@ mbedtls_mps_size_t l2_get_header_len( mbedtls_mps_l2 *ctx,
 #else
     ((void) ctx);
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( 0 );
 }
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
@@ -2195,16 +2197,24 @@ int l2_out_get_and_update_rec_seq( mbedtls_mps_l2 *ctx,
 
 #if defined(MBEDTLS_MPS_PROTO_TLS)
     MBEDTLS_MPS_IF_TLS( mode )
+    {
         src_ctr = epoch->stats.tls.out_ctr;
+        dst_ctr[0] = src_ctr[0];
+        dst_ctr[1] = src_ctr[1];
+        return( l2_increment_counter( src_ctr ) );
+    }
 #endif /* MBEDTLS_MPS_PROTO_TLS */
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
+    {
         src_ctr = epoch->stats.dtls.out_ctr;
+        dst_ctr[0] = src_ctr[0];
+        dst_ctr[1] = src_ctr[1];
+        return( l2_increment_counter( src_ctr ) );
+    }
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 
-    dst_ctr[0] = src_ctr[0];
-    dst_ctr[1] = src_ctr[1];
-    return( l2_increment_counter( src_ctr ) );
 }
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)

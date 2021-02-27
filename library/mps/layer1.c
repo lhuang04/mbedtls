@@ -1160,6 +1160,7 @@ int mps_l1_fetch( mps_l1 *ctx, unsigned char **buf,
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_fetch_dgram( &ctx->raw.dgram.rd, buf, desired ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 int mps_l1_consume( mps_l1 *ctx )
@@ -1175,6 +1176,7 @@ int mps_l1_consume( mps_l1 *ctx )
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_consume_dgram( &ctx->raw.dgram.rd ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 int mps_l1_write( mps_l1 *ctx, unsigned char **buf,
@@ -1191,6 +1193,7 @@ int mps_l1_write( mps_l1 *ctx, unsigned char **buf,
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_write_dgram( &ctx->raw.dgram.wr, buf, buflen ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 int mps_l1_dispatch( mps_l1 *ctx,
@@ -1208,6 +1211,7 @@ int mps_l1_dispatch( mps_l1 *ctx,
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_dispatch_dgram( &ctx->raw.dgram.wr, len, pending ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 int mps_l1_flush( mps_l1 *ctx )
@@ -1223,6 +1227,7 @@ int mps_l1_flush( mps_l1 *ctx )
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_flush_dgram( &ctx->raw.dgram.wr ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 /* TODO: Will we need this at some point? */
@@ -1240,6 +1245,7 @@ int mps_l1_read_dependency( mps_l1 *ctx )
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_read_dependency_dgram( &ctx->raw.dgram.rd ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 /* TODO: Will we need this at some point? */
@@ -1257,6 +1263,7 @@ int mps_l1_write_dependency( mps_l1 *ctx )
     MBEDTLS_MPS_ELSE_IF_DTLS( mode )
         return( l1_write_dependency_dgram( &ctx->raw.dgram.wr ) );
 #endif /* MBEDTLS_MPS_PROTO_DTLS */
+    RETURN( MBEDTLS_ERR_MPS_INTERNAL_ERROR );
 }
 
 #if defined(MBEDTLS_MPS_PROTO_DTLS)
