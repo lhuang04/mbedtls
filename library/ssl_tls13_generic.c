@@ -804,10 +804,13 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl );
 #define SSL_WRITE_CCS_NEEDED     0
 #define SSL_WRITE_CCS_SKIP       1
 static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl );
+
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
     unsigned char* buf,
     size_t buflen,
     size_t* olen );
+#endif /* !MBEDTLS_SSL_USE_MPS */
 static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl );
 
 
@@ -825,6 +828,13 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 
     if( ret == SSL_WRITE_CCS_NEEDED )
     {
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_ccs( &ssl->mps.l4 ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps.l4 ) );
+
+#else /* MBEDTLS_SSL_USE_MPS */
         /* Make sure we can write a new message. */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
 
@@ -837,6 +847,8 @@ int mbedtls_ssl_write_change_cipher_spec_process( mbedtls_ssl_context* ssl )
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, SSL_FORCE_FLUSH ) );
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
         /* Update state */
         MBEDTLS_SSL_PROC_CHK( ssl_write_change_cipher_spec_postprocess( ssl ) );
@@ -875,6 +887,7 @@ static int ssl_write_change_cipher_spec_coordinate( mbedtls_ssl_context* ssl )
     return( ret );
 }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
                                                unsigned char* buf,
                                                size_t buflen,
@@ -892,6 +905,7 @@ static int ssl_write_change_cipher_spec_write( mbedtls_ssl_context* ssl,
     *olen = 1;
     return( 0 );
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 static int ssl_write_change_cipher_spec_postprocess( mbedtls_ssl_context* ssl )
 {
@@ -1170,7 +1184,7 @@ int mbedtls_ssl_parse_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         for( md_cur = ssl->conf->sig_hashes; *md_cur != SIGNATURE_NONE; md_cur++ )
             num_supported_hashes++;
     }
-    
+
     /* Clear previously allocated memory */
     if( ssl->handshake->received_signature_schemes_list != NULL )
         mbedtls_free( ssl->handshake->received_signature_schemes_list );
@@ -4997,13 +5011,13 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
 
         memcpy( ssl->session->ticket_nonce, &buf[9], ssl->session->ticket_nonce_len );
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", (unsigned char*)&buf[9], 
+        MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", (unsigned char*)&buf[9],
         ssl->session->ticket_nonce_len );
 
     }
 
     /* Ticket */
-    ticket_len = ( buf[9 + ssl->session->ticket_nonce_len] << 8 ) | 
+    ticket_len = ( buf[9 + ssl->session->ticket_nonce_len] << 8 ) |
                  ( buf[10 + ssl->session->ticket_nonce_len] );
 
     used += ticket_len;
@@ -5069,7 +5083,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     }
 
     hash_length = mbedtls_hash_size_for_ciphersuite( suite_info );
-    
+
     if( hash_length == -1 )
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
 
@@ -5078,7 +5092,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                            hash_length );
 
     /* Computer resumption key
-     * 
+     *
      *  HKDF-Expand-Label( resumption_master_secret,
      *                    "resumption", ticket_nonce, Hash.length )
      */
@@ -5099,7 +5113,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
 
     ssl->session->resumption_key_len = mbedtls_hash_size_for_ciphersuite( suite_info );
 
-    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ssl->session->key, 
+    MBEDTLS_SSL_DEBUG_BUF( 3, "Ticket-resumed PSK", ssl->session->key,
                            ssl->session->resumption_key_len );
 
 #if defined(MBEDTLS_HAVE_TIME)
