@@ -4920,21 +4920,24 @@ int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
             MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_parse_new_session_ticket", ret);
             return(ret);
         }
-        mbedtls_ssl_ticket* ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_ticket));
-        if (ticket == NULL)
+
+        mbedtls_ssl_session* session_ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_session));
+        if (session_ticket == NULL)
         {
             return (MBEDTLS_ERR_SSL_ALLOC_FAILED);
         }
-        if ((mbedtls_ssl_get_client_ticket(ssl, ticket) != 0))
+
+        if( ( ret = mbedtls_ssl_get_session( ssl, session_ticket ) ) != 0 )
         {
-            mbedtls_free(ticket->ticket);
-            mbedtls_free(ticket);
-            return (MBEDTLS_ERR_SSL_INTERNAL_ERROR);
+            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_get_session", ret);
+            mbedtls_ssl_session_free(session_ticket);
+            return(ret);
         }
+
         // the ticket will be transfered to and be released by the app
         ssl->quic_method->process_new_session(
                 ssl->p_quic_method,
-                ticket);
+                session_ticket);
         return (ret);
     }
 
