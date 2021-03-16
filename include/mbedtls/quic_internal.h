@@ -1,11 +1,7 @@
 #ifndef MBEDTLS_SSL_QIUC_INTERNAL_H
 #define MBEDTLS_SSL_QIUC_INTERNAL_H
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "mbedtls/config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif /* MBEDTLS_CONFIG_FILE */
+#include "mbedtls/build_info.h"
 
 #if defined(MBEDTLS_SSL_PROTO_QUIC)
 #include "mbedtls/quic.h"
@@ -307,15 +303,15 @@ static inline int quic_input_validate_last_hdr(mbedtls_ssl_context *ssl,
   if (!quic_input_hs_type_valid(hs_msg_type)) {
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "quic_input_validate_last_hdr: FATAL ERR "
           "invalid handshake message type %c", hs_msg_type));
-    return MBEDTLS_ERR_SSL_BAD_HS_UNKNOWN_MSG;
+    return MBEDTLS_ERR_SSL_INVALID_RECORD;
   }
 
   const size_t hs_msg_size = hs_msg_body_size(queue->tmp_hdr) + QUIC_HS_HDR_SIZE;
 
-  if (hs_msg_size > MBEDTLS_SSL_MAX_CONTENT_LEN) {
+  if (hs_msg_size > MBEDTLS_SSL_IN_CONTENT_LEN) {
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "quic_input_validate_last_hdr: FATAL ERR "
           "handshake message size %u exceeds max %u",
-          hs_msg_type, MBEDTLS_SSL_MAX_CONTENT_LEN));
+          hs_msg_type, MBEDTLS_SSL_IN_CONTENT_LEN));
     return MBEDTLS_ERR_SSL_INVALID_RECORD;
   }
 
