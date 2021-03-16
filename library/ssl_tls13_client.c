@@ -162,13 +162,11 @@ int ssl_write_early_data_process( mbedtls_ssl_context* ssl )
         MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_postprocess( ssl ) );
 
 #else  /* MBEDTLS_SSL_USE_MPS */
+
 #if defined(MBEDTLS_SSL_PROTO_QUIC)
         if (ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_QUIC)
 #endif /* MBEDTLS_SSL_PROTO_QUIC */
         {
-            /* Make sure we can write a new message. */
-            MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
-
             /* Write early-data to message buffer. */
             MBEDTLS_SSL_PROC_CHK( ssl_write_early_data_write( ssl, ssl->out_msg,
                                                               MBEDTLS_SSL_OUT_CONTENT_LEN,
@@ -3068,8 +3066,8 @@ static int ssl_server_hello_session_id_check( mbedtls_ssl_context* ssl,
 }
 
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
-        const unsigned char* buf,
-        size_t buflen )
+                                   const unsigned char* buf,
+                                   size_t buflen )
 {
 
     int ret; /* return value */
@@ -3158,7 +3156,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+                              MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -4061,9 +4059,19 @@ static int ssl_new_session_ticket_process( mbedtls_ssl_context* ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse new session ticket" ) );
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+    {
+        buf = ssl->in_msg + mbedtls_ssl_hs_hdr_len( ssl );
+        buflen = ssl->in_hslen - mbedtls_ssl_hs_hdr_len( ssl );
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+    {
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_fetch_handshake_msg( ssl,
                                           MBEDTLS_SSL_HS_NEW_SESSION_TICKET,
                                           &buf, &buflen ) );
+    }
 
     MBEDTLS_SSL_PROC_CHK( ssl_new_session_ticket_parse( ssl, buf, buflen ) );
 
@@ -4307,26 +4315,29 @@ int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
     {
         MBEDTLS_SSL_DEBUG_MSG(3, ("NewSessionTicket received"));
 
-        if ((ret = mbedtls_ssl_new_session_ticket_process(ssl)) != 0)
+        if ((ret = ssl_new_session_ticket_process(ssl)) != 0)
         {
             MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_parse_new_session_ticket", ret);
             return(ret);
         }
-        mbedtls_ssl_ticket* ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_ticket));
-        if (ticket == NULL)
+
+        mbedtls_ssl_session* session_ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_session));
+        if (session_ticket == NULL)
         {
             return (MBEDTLS_ERR_SSL_ALLOC_FAILED);
         }
-        if ((mbedtls_ssl_get_client_ticket(ssl, ticket) != 0))
+
+        if( ( ret = mbedtls_ssl_get_session( ssl, session_ticket ) ) != 0 )
         {
-            mbedtls_free(ticket->ticket);
-            mbedtls_free(ticket);
-            return (MBEDTLS_ERR_SSL_INTERNAL_ERROR);
+            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_get_session", ret);
+            mbedtls_ssl_session_free(session_ticket);
+            return(ret);
         }
+
         // the ticket will be transfered to and be released by the app
         ssl->quic_method->process_new_session(
                 ssl->p_quic_method,
-                ticket);
+                session_ticket);
         return (ret);
     }
 
