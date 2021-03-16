@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
-typedef struct mbedtls_ssl_ticket  mbedtls_ssl_ticket;
+typedef struct mbedtls_ssl_session  mbedtls_ssl_session;
 typedef struct mbedtls_quic_input  mbedtls_quic_input;
 typedef struct quic_input_msg      quic_input_msg;
 typedef struct quic_input_queue    quic_input_queue;
@@ -176,7 +176,7 @@ typedef int mbedtls_quic_send_alert_t(
  */
 typedef void mbedtls_quic_process_new_session_t(
     void                     *param,
-    mbedtls_ssl_ticket       *session_ticket);
+    mbedtls_ssl_session       *session_ticket);
 /**
  * \brief QUIC method callbacks.
  */

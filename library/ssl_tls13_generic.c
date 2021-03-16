@@ -2376,6 +2376,7 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
         if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
             mbedtls_set_quic_traffic_key(ssl, MBEDTLS_SSL_CRYPTO_LEVEL_APPLICATION);
 #endif /* MBEDTLS_SSL_PROTO_QUIC */
+
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
     }
     else
@@ -3185,6 +3186,51 @@ int mbedtls_ssl_write_early_data_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+
+/* declared in ssl_internal.h */
+int ssl_set_quic_transport_params(mbedtls_ssl_context *ssl,
+        const uint8_t *params, size_t len,
+        uint8_t **oparams, size_t *olen) 
+{
+    if (len > MBEDTLS_QUIC_TRANSPORT_PARAMS_MAX_LEN)
+    {
+        MBEDTLS_SSL_DEBUG_MSG(1, ("ssl_set_quic_transport_params: bad transport_params length"));
+        return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+    }
+
+    if ((*oparams = mbedtls_calloc(1, len)) == NULL)
+    {
+        return MBEDTLS_ERR_SSL_ALLOC_FAILED;
+    }
+
+    memcpy(*oparams, params, len);
+    *olen = len;
+
+    return 0;
+}
+
+int mbedtls_ssl_set_quic_transport_params(mbedtls_ssl_context *ssl,
+        const uint8_t *params, size_t len)
+{
+    // Setting transport params more than once is not expected, but
+    // permitted.
+    mbedtls_free(ssl->quic_transport_params);
+    ssl->quic_transport_params = NULL;
+
+    return ssl_set_quic_transport_params(ssl, params, len,
+            &ssl->quic_transport_params, &ssl->quic_transport_params_len);
+}
+
+void mbedtls_ssl_get_peer_quic_transport_params(mbedtls_ssl_context *ssl,
+    const uint8_t **oparams, size_t *olen)
+{
+    *oparams = (const uint8_t*)(ssl->peer_quic_transport_params);
+    *olen = ssl->peer_quic_transport_params_len;
+}
+
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 
 #if defined(MBEDTLS_ECDH_C)
 #if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
@@ -3569,52 +3615,6 @@ int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp, size_t *olen,
 }
 
 #endif /* MBEDTLS_ECP_C */
-
-#if defined(MBEDTLS_SSL_PROTO_QUIC)
-
-/* declared in ssl_internal.h */
-int ssl_set_quic_transport_params(mbedtls_ssl_context *ssl,
-        const uint8_t *params, size_t len,
-        uint8_t **oparams, size_t *olen) 
-{
-    if (len > MBEDTLS_QUIC_TRANSPORT_PARAMS_MAX_LEN)
-    {
-        MBEDTLS_SSL_DEBUG_MSG(1, ("ssl_set_quic_transport_params: bad transport_params length"));
-        return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
-    }
-
-    if ((*oparams = mbedtls_calloc(1, len)) == NULL)
-    {
-        return MBEDTLS_ERR_SSL_ALLOC_FAILED;
-    }
-
-    memcpy(*oparams, params, len);
-    *olen = len;
-
-    return 0;
-}
-
-int mbedtls_ssl_set_quic_transport_params(mbedtls_ssl_context *ssl,
-        const uint8_t *params, size_t len)
-{
-    // Setting transport params more than once is not expected, but
-    // permitted.
-    mbedtls_free(ssl->quic_transport_params);
-    ssl->quic_transport_params = NULL;
-
-    return ssl_set_quic_transport_params(ssl, params, len,
-            &ssl->quic_transport_params, &ssl->quic_transport_params_len);
-}
-
-void mbedtls_ssl_get_peer_quic_transport_params(mbedtls_ssl_context *ssl,
-    const uint8_t **oparams, size_t *olen)
-{
-    *oparams = (const uint8_t*)(ssl->peer_quic_transport_params);
-    *olen = ssl->peer_quic_transport_params_len;
-}
-
-#endif /* MBEDTLS_SSL_PROTO_QUIC */
-
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* MBEDTLS_SSL_TLS_C */

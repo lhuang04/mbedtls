@@ -3298,8 +3298,8 @@ static int ssl_server_hello_session_id_check( mbedtls_ssl_context* ssl,
 }
 
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
-        const unsigned char* buf,
-        size_t buflen )
+                                   const unsigned char* buf,
+                                   size_t buflen )
 {
 
     int ret; /* return value */
@@ -3399,7 +3399,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+                              MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -3412,7 +3412,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
@@ -3429,12 +3429,12 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
         if( ssl->conf->ciphersuite_list[ssl->minor_ver][i++] ==
-                ssl->session_negotiate->ciphersuite )
+            ssl->session_negotiate->ciphersuite )
         {
             break;
         }
@@ -3457,7 +3457,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
@@ -3469,7 +3469,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                              MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
     }
 
@@ -3488,7 +3488,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
         {
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad server hello message" ) );
             SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER,
-                    MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
+                                  MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO );
         }
 
@@ -4535,21 +4535,24 @@ int mbedtls_ssl_quic_post_handshake(mbedtls_ssl_context *ssl)
             MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_parse_new_session_ticket", ret);
             return(ret);
         }
-        mbedtls_ssl_ticket* ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_ticket));
-        if (ticket == NULL)
+
+        mbedtls_ssl_session* session_ticket = mbedtls_calloc(1, sizeof(mbedtls_ssl_session));
+        if (session_ticket == NULL)
         {
             return (MBEDTLS_ERR_SSL_ALLOC_FAILED);
         }
-        if ((mbedtls_ssl_get_client_ticket(ssl, ticket) != 0))
+
+        if( ( ret = mbedtls_ssl_get_session( ssl, session_ticket ) ) != 0 )
         {
-            mbedtls_free(ticket->ticket);
-            mbedtls_free(ticket);
-            return (MBEDTLS_ERR_SSL_INTERNAL_ERROR);
+            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ssl_get_session", ret);
+            mbedtls_ssl_session_free(session_ticket);
+            return(ret);
         }
+
         // the ticket will be transfered to and be released by the app
         ssl->quic_method->process_new_session(
                 ssl->p_quic_method,
-                ticket);
+                session_ticket);
         return (ret);
     }
 
