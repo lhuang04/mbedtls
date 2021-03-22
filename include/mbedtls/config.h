@@ -1909,7 +1909,7 @@
  *
  * Comment this macro to disable support for ALPN.
  */
-//#define MBEDTLS_SSL_ALPN
+#define MBEDTLS_SSL_ALPN
 
 /**
  * \def MBEDTLS_SSL_DTLS_ANTI_REPLAY
@@ -2240,7 +2240,7 @@
  *
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
-//#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
+#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
 
 /**
  * \def MBEDTLS_ZLIB_SUPPORT
@@ -3272,7 +3272,7 @@
  *
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
-//#define MBEDTLS_RSA_C
+#define MBEDTLS_RSA_C
 
 /**
  * \def MBEDTLS_SHA1_C
@@ -3326,7 +3326,7 @@
  *
  * This module adds support for SHA-384 and SHA-512.
  */
-// #define MBEDTLS_SHA512_C
+ #define MBEDTLS_SHA512_C
 
 /**
  * \def MBEDTLS_SSL_CACHE_C
@@ -3388,7 +3388,7 @@
  *
  * This module is required for SSL/TLS server support.
  */
-#define MBEDTLS_SSL_SRV_C
+//#define MBEDTLS_SSL_SRV_C
 
 /**
  * \def MBEDTLS_SSL_TLS_C
