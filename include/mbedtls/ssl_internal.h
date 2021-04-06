@@ -1947,240 +1947,199 @@ void mbedtls_ssl_reset_retransmit_timeout( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-#define MBEDTLS_SSL_TLS1_3_LABEL_LIST                                   \
-    const unsigned char finished    [ sizeof("finished")     - 1 ];     \
-    const unsigned char resumption  [ sizeof("resumption")   - 1 ];     \
-    const unsigned char traffic_upd [ sizeof("traffic upd")  - 1 ];     \
-    const unsigned char export      [ sizeof("exporter")     - 1 ];     \
-    const unsigned char key         [ sizeof("key")          - 1 ];     \
-    const unsigned char iv          [ sizeof("iv")           - 1 ];     \
-    const unsigned char sn          [ sizeof("sn")           - 1 ];     \
-    const unsigned char c_hs_traffic[ sizeof("c hs traffic") - 1 ];     \
-    const unsigned char c_ap_traffic[ sizeof("c ap traffic") - 1 ];     \
-    const unsigned char c_e_traffic [ sizeof("c e traffic")  - 1 ];     \
-    const unsigned char s_hs_traffic[ sizeof("s hs traffic") - 1 ];     \
-    const unsigned char s_ap_traffic[ sizeof("s ap traffic") - 1 ];     \
-    const unsigned char s_e_traffic [ sizeof("s e traffic")  - 1 ];     \
-    const unsigned char exp_master  [ sizeof("exp master")   - 1 ];     \
-    const unsigned char res_master  [ sizeof("res master")   - 1 ];     \
-    const unsigned char ext_binder  [ sizeof("ext binder")   - 1 ];     \
-    const unsigned char res_binder  [ sizeof("res binder")   - 1 ];     \
-    const unsigned char derived     [ sizeof("derived")      - 1 ];     \
-
-union mbedtls_ssl_tls1_3_labels_union
-{
-    MBEDTLS_SSL_TLS1_3_LABEL_LIST
-};
-struct mbedtls_ssl_tls1_3_labels_struct
-{
-    MBEDTLS_SSL_TLS1_3_LABEL_LIST
-};
-extern const struct mbedtls_ssl_tls1_3_labels_struct mbedtls_ssl_tls1_3_labels;
-
-#define MBEDTLS_SSL_TLS1_3_LBL_WITH_LEN( LABEL )  \
-    mbedtls_ssl_tls1_3_labels.LABEL,              \
-    sizeof(mbedtls_ssl_tls1_3_labels.LABEL)
-
-#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_LABEL_LEN  \
-    sizeof( union mbedtls_ssl_tls1_3_labels_union )
-
-/* The maximum length of HKDF contexts used in the TLS 1.3 standad.
- * Since contexts are always hashes of message transcripts, this can
- * be approximated from above by the maximum hash size. */
-#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_CONTEXT_LEN  \
-    MBEDTLS_MD_MAX_SIZE
-
-/* Maximum desired length for expanded key material generated
- * by HKDF-Expand-Label. */
-#define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN 255
+#if defined(MBEDTLS_ECDH_C)
+/**
+ * \brief           This function generates an EC key pair and exports its
+ *                  in the format used in a TLS 1.3 KeyShare extension.
+ *
+ * \see             ecp.h
+ *
+ * \param ctx       The ECDH context to use. This must be initialized
+ *                  and bound to a group, for example via mbedtls_ecdh_setup().
+ * \param olen      The address at which to store the number of Bytes written.
+ * \param buf       The destination buffer. This must be a writable buffer of
+ *                  length \p blen Bytes.
+ * \param blen      The length of the destination buffer \p buf in Bytes.
+ * \param f_rng     The RNG function to use. This must not be \c NULL.
+ * \param p_rng     The RNG context to be passed to \p f_rng. This may be
+ *                  \c NULL in case \p f_rng doesn't need a context argument.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
+ * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
+ */
+int mbedtls_ecdh_make_tls_13_params( mbedtls_ecdh_context *ctx, size_t *olen,
+                      unsigned char *buf, size_t blen,
+                      int (*f_rng)(void *, unsigned char *, size_t),
+                      void *p_rng );
 
 /**
- * \brief           This function is part of the TLS 1.3 key schedule.
- *                  It extracts key and IV for the actual client/server traffic
- *                  from the client/server traffic secrets.
+ * \brief           This function parses the ECDHE parameters in a
+ *                  TLS 1.3 KeyShare extension.
  *
- * From RFC 8446:
+ * \see             ecp.h
  *
- * <tt>
- *   [sender]_write_key = HKDF-Expand-Label(Secret, "key", "", key_length)
- *   [sender]_write_iv  = HKDF-Expand-Label(Secret, "iv", "", iv_length)*
- * </tt>
+ * \param ctx       The ECDHE context to use. This must be initialized.
+ * \param buf       On input, \c *buf must be the start of the input buffer.
+ *                  On output, \c *buf is updated to point to the end of the
+ *                  data that has been read. On success, this is the first byte
+ *                  past the end of the ServerKeyExchange parameters.
+ *                  On error, this is the point at which an error has been
+ *                  detected, which is usually not useful except to debug
+ *                  failures.
+ * \param end       The end of the input buffer.
  *
- * \param hash_alg      The identifier for the hash algorithm to be used
- *                      for the HKDF-based expansion of the secret.
- * \param client_secret The client traffic secret.
- *                      This must be a readable buffer of size \p slen Bytes
- * \param server_secret The server traffic secret.
- *                      This must be a readable buffer of size \p slen Bytes
- * \param slen          Length of the secrets \p client_secret and
- *                      \p server_secret in Bytes.
- * \param key_len       The desired length of the key to be extracted in Bytes.
- * \param iv_len        The desired length of the IV to be extracted in Bytes.
- * \param keys          The address of the structure holding the generated
- *                      keys and IVs.
+ * \return          \c 0 on success.
+ * \return          An \c MBEDTLS_ERR_ECP_XXX error code on failure.
  *
- * \returns             \c 0 on success.
- * \returns             A negative error code on failure.
  */
-
-int mbedtls_ssl_tls1_3_make_traffic_keys(
-                     mbedtls_md_type_t hash_alg,
-                     const unsigned char *client_secret,
-                     const unsigned char *server_secret,
-                     size_t slen, size_t key_len, size_t iv_len,
-                     mbedtls_ssl_key_set *keys );
+int mbedtls_ecdh_read_tls_13_params( mbedtls_ecdh_context *ctx,
+                              const unsigned char **buf,
+                              const unsigned char *end );
 
 /**
- * \brief           The \c HKDF-Expand-Label function from
- *                  the TLS 1.3 standard RFC 8446.
+ * \brief           This function generates a public key and exports it
+ *                  as a TLS 1.3 KeyShare payload.
  *
- * <tt>
- *                  HKDF-Expand-Label( Secret, Label, Context, Length ) =
- *                       HKDF-Expand( Secret, HkdfLabel, Length )
- * </tt>
+ * \see             ecp.h
  *
- * \param hash_alg  The identifier for the hash algorithm to use.
- * \param secret    The \c Secret argument to \c HKDF-Expand-Label.
- *                  This must be a readable buffer of length \p slen Bytes.
- * \param slen      The length of \p secret in Bytes.
- * \param label     The \c Label argument to \c HKDF-Expand-Label.
- *                  This must be a readable buffer of length \p llen Bytes.
- * \param llen      The length of \p label in Bytes.
- * \param ctx       The \c Context argument to \c HKDF-Expand-Label.
- *                  This must be a readable buffer of length \p clen Bytes.
- * \param clen      The length of \p context in Bytes.
- * \param buf       The destination buffer to hold the expanded secret.
- *                  This must be a writable buffe of length \p blen Bytes.
- * \param blen      The desired size of the expanded secret in Bytes.
+ * \param ctx       The ECDH context to use. This must be initialized
+ *                  and bound to a group, the latter usually by
+ *                  mbedtls_ecdh_read_params().
+ * \param olen      The address at which to store the number of Bytes written.
+ *                  This must not be \c NULL.
+ * \param buf       The destination buffer. This must be a writable buffer
+ *                  of length \p blen Bytes.
+ * \param blen      The size of the destination buffer \p buf in Bytes.
+ * \param f_rng     The RNG function to use. This must not be \c NULL.
+ * \param p_rng     The RNG context to be passed to \p f_rng. This may be
+ *                  \c NULL in case \p f_rng doesn't need a context argument.
  *
- * \returns         \c 0 on success.
- * \return          A negative error code on failure.
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_IN_PROGRESS if maximum number of
+ *                  operations was reached: see \c mbedtls_ecp_set_max_ops().
+ * \return          Another \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
-
-int mbedtls_ssl_tls1_3_hkdf_expand_label(
-                     mbedtls_md_type_t hash_alg,
-                     const unsigned char *secret, size_t slen,
-                     const unsigned char *label, size_t llen,
-                     const unsigned char *ctx, size_t clen,
-                     unsigned char *buf, size_t blen );
+int mbedtls_ecdh_make_tls_13_public( mbedtls_ecdh_context *ctx, size_t *olen,
+                      unsigned char *buf, size_t blen,
+                      int (*f_rng)(void *, unsigned char *, size_t),
+                      void *p_rng );
 
 /**
- * \brief The \c Derive-Secret function from the TLS 1.3 standard RFC 8446.
+ * \brief       This function parses and processes the ECDHE payload of a
+ *              TLS 1.3 KeyShare extension.
  *
- * <tt>
- *   Derive-Secret( Secret, Label, Messages ) =
- *      HKDF-Expand-Label( Secret, Label,
- *                         Hash( Messages ),
- *                         Hash.Length ) )
- * </tt>
+ * \see         ecp.h
  *
- * Note: In this implementation of the function we assume that
- * the parameter message contains the already hashed value and
- * the Derive-Secret function does not need to hash it again.
+ * \param ctx   The ECDH context to use. This must be initialized
+ *              and bound to a group, for example via mbedtls_ecdh_setup().
+ * \param buf   The pointer to the ClientKeyExchange payload. This must
+ *              be a readable buffer of length \p blen Bytes.
+ * \param blen  The length of the input buffer \p buf in Bytes.
  *
- * \param hash_alg The identifier for the hash function used for the
- *                 applications of HKDF.
- * \param secret   The \c Secret argument to the \c Derive-Secret function.
- *                 This must be a readable buffer of length \p slen Bytes.
- * \param slen     The length of \p secret in Bytes.
- * \param label    The \c Label argument to the \c Derive-Secret function.
- *                 This must be a readable buffer of length \p llen Bytes.
- * \param llen     The length of \p label in Bytes.
- * \param hash     The hash of the \c Messages argument to the \c Derive-Secret
- *                 function. This must be a readable buffer of length \p mlen
- *                 hlen Bytes.
- * \param hlen     The length of \p hash.
- * \param dstbuf   The target buffer to write the output of \c Derive-Secret to.
- *                 This must be a writable buffer of size \p buflen Bytes.
- * \param buflen   The length of \p dstbuf in Bytes.
- *
- * \returns        \c 0 on success.
- * \returns        A negative error code on failure.
+ * \return      \c 0 on success.
+ * \return      An \c MBEDTLS_ERR_ECP_XXX error code on failure.
  */
+int mbedtls_ecdh_read_tls_13_public( mbedtls_ecdh_context *ctx,
+                              const unsigned char *buf, size_t blen );
+#endif /* MBEDTLS_ECDH_C */
 
-#define MBEDTLS_SSL_TLS1_3_CONTEXT_UNHASHED 0
-#define MBEDTLS_SSL_TLS1_3_CONTEXT_HASHED   1
-
-int mbedtls_ssl_tls1_3_derive_secret(
-                   mbedtls_md_type_t hash_alg,
-                   const unsigned char *secret, size_t slen,
-                   const unsigned char *label, size_t llen,
-                   const unsigned char *ctx, size_t clen,
-                   int context_already_hashed,
-                   unsigned char *dstbuf, size_t buflen );
+#if defined(MBEDTLS_ECP_C)
+/**
+ * \brief           This function imports a point from a TLS ECPoint record.
+ *
+ * \note            On function return, \p *buf is updated to point immediately
+ *                  after the ECPoint record.
+ *
+ * \param grp       The ECP group to use.
+ *                  This must be initialized and have group parameters
+ *                  set, for example through mbedtls_ecp_group_load().
+ * \param pt        The destination point.
+ * \param buf       The address of the pointer to the start of the input buffer.
+ * \param len       The length of the buffer.
+ *
+ * \return          \c 0 on success.
+ * \return          An \c MBEDTLS_ERR_MPI_XXX error code on initialization
+ *                  failure.
+ * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
+ */
+int mbedtls_ecp_tls_13_read_point( const mbedtls_ecp_group *grp,
+                                mbedtls_ecp_point *pt,
+                                const unsigned char **buf, size_t len );
 
 /**
- * \brief Compute the next secret in the TLS 1.3 key schedule
+ * \brief           This function exports a point as defined in TLS 1.3.
  *
- * The TLS 1.3 key schedule proceeds as follows to compute
- * the three main secrets during the handshake: The early
- * secret for early data, the handshake secret for all
- * other encrypted handshake messages, and the master
- * secret for all application traffic.
+ * \param grp       The ECP group to use.
+ *                  This must be initialized and have group parameters
+ *                  set, for example through mbedtls_ecp_group_load().
+ * \param pt        The point to be exported. This must be initialized.
+ * \param format    The point format to use. This must be either
+ *                  #MBEDTLS_ECP_PF_COMPRESSED or #MBEDTLS_ECP_PF_UNCOMPRESSED.
+ * \param olen      The address at which to store the length in Bytes
+ *                  of the data written.
+ * \param buf       The target buffer. This must be a writable buffer of
+ *                  length \p blen Bytes.
+ * \param blen      The length of the target buffer \p buf in Bytes.
  *
- * <tt>
- *                    0
- *                    |
- *                    v
- *     PSK ->  HKDF-Extract = Early Secret
- *                    |
- *                    v
- *     Derive-Secret( ., "derived", "" )
- *                    |
- *                    v
- *  (EC)DHE -> HKDF-Extract = Handshake Secret
- *                    |
- *                    v
- *     Derive-Secret( ., "derived", "" )
- *                    |
- *                    v
- *     0 -> HKDF-Extract = Master Secret
- * </tt>
- *
- * Each of the three secrets in turn is the basis for further
- * key derivations, such as the derivation of traffic keys and IVs;
- * see e.g. mbedtls_ssl_tls1_3_make_traffic_keys().
- *
- * This function implements one step in this evolution of secrets:
- *
- * <tt>
- *                old_secret
- *                    |
- *                    v
- *     Derive-Secret( ., "derived", "" )
- *                    |
- *                    v
- *     input -> HKDF-Extract = new_secret
- * </tt>
- *
- * \param hash_alg    The identifier for the hash function used for the
- *                    applications of HKDF.
- * \param secret_old  The address of the buffer holding the old secret
- *                    on function entry. If not \c NULL, this must be a
- *                    readable buffer whose size matches the output size
- *                    of the hash function represented by \p hash_alg.
- *                    If \c NULL, an all \c 0 array will be used instead.
- * \param input       The address of the buffer holding the additional
- *                    input for the key derivation (e.g., the PSK or the
- *                    ephemeral (EC)DH secret). If not \c NULL, this must be
- *                    a readable buffer whose size \p input_len Bytes.
- *                    If \c NULL, an all \c 0 array will be used instead.
- * \param input_len   The length of \p input in Bytes.
- * \param secret_new  The address of the buffer holding the new secret
- *                    on function exit. This must be a writable buffer
- *                    whose size matches the output size of the hash
- *                    function represented by \p hash_alg.
- *                    This may be the same as \p secret_old.
- *
- * \returns           \c 0 on success.
- * \returns           A negative error code on failure.
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if the input is invalid.
+ * \return          #MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL if the target buffer
+ *                  is too small to hold the exported point.
+ * \return          Another negative error code on other kinds of failure.
  */
+int mbedtls_ecp_tls_13_write_point( const mbedtls_ecp_group *grp,
+                                 const mbedtls_ecp_point *pt,
+                                 int format, size_t *olen,
+                                 unsigned char *buf, size_t blen );
 
-int mbedtls_ssl_tls1_3_evolve_secret(
-                   mbedtls_md_type_t hash_alg,
-                   const unsigned char *secret_old,
-                   const unsigned char *input, size_t input_len,
-                   unsigned char *secret_new );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) */
+
+/**
+ * \brief           This function extracts an elliptic curve group ID from a
+ *                  TLS ECParameters record as defined in TLS 1.3.
+ *
+ * \note            The read pointer \p buf is updated to point right after
+ *                  the ECParameters record on exit.
+ *
+ * \param grp       The address at which to store the group id.
+ *                  This must not be \c NULL.
+ * \param buf       The address of the pointer to the start of the input buffer.
+ * \param len       The length of the input buffer \c *buf in Bytes.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BAD_INPUT_DATA if input is invalid.
+ * \return          #MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE if the group is not
+ *                  recognized.
+ * \return          Another negative error code on other kinds of failure.
+ */
+int mbedtls_ecp_tls_13_read_group_id( mbedtls_ecp_group_id *grp,
+                                   const unsigned char **buf,
+                                   size_t len );
+
+
+/**
+ * \brief           This function exports an elliptic curve as a TLS
+ *                  ECParameters record as defined in TLS 1.3.
+ *
+ * \param grp       The ECP group to be exported.
+ *                  This must be initialized and have group parameters
+ *                  set, for example through mbedtls_ecp_group_load().
+ * \param olen      The address at which to store the number of Bytes written.
+ *                  This must not be \c NULL.
+ * \param buf       The buffer to write to. This must be a writable buffer
+ *                  of length \p blen Bytes.
+ * \param blen      The length of the output buffer \p buf in Bytes.
+ *
+ * \return          \c 0 on success.
+ * \return          #MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL if the output
+ *                  buffer is too small to hold the exported group.
+ * \return          Another negative error code on other kinds of failure.
+ */
+int mbedtls_ecp_tls_13_write_group( const mbedtls_ecp_group *grp,
+                                 size_t *olen,
+                                 unsigned char *buf, size_t blen );
+#endif /* MBEDTLS_ECP_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 #endif /* ssl_internal.h */
