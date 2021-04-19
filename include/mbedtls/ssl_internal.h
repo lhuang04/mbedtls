@@ -495,6 +495,30 @@ typedef struct mbedtls_ssl_key_set mbedtls_ssl_key_set;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
 
+typedef struct
+{
+    unsigned char binder_key                  [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char client_early_traffic_secret [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char early_exporter_master_secret[ MBEDTLS_MD_MAX_SIZE ];
+    size_t secret_len;
+} mbedtls_ssl_tls1_3_early_secrets;
+
+typedef struct
+{
+    unsigned char client_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_handshake_traffic_secret[ MBEDTLS_MD_MAX_SIZE ];
+    size_t secret_len;
+} mbedtls_ssl_tls1_3_handshake_secrets;
+
+typedef struct
+{
+    unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char server_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char exporter_master_secret             [ MBEDTLS_MD_MAX_SIZE ];
+    unsigned char resumption_master_secret           [ MBEDTLS_MD_MAX_SIZE ];
+    size_t secret_len;
+} mbedtls_ssl_tls1_3_application_secrets;
+
 /*
  * This structure contains the parameters only needed during handshake.
  */
@@ -836,8 +860,7 @@ struct mbedtls_ssl_handshake_params
     unsigned char exporter_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char early_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char handshake_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char client_handshake_traffic_secret[MBEDTLS_MD_MAX_SIZE];
-    unsigned char server_handshake_traffic_secret[MBEDTLS_MD_MAX_SIZE];
+    mbedtls_ssl_tls1_3_handshake_secrets hs_secrets;
     unsigned char master_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char client_traffic_secret[MBEDTLS_MD_MAX_SIZE];
     unsigned char server_traffic_secret[MBEDTLS_MD_MAX_SIZE];
