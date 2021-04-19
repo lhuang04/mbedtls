@@ -820,9 +820,7 @@ psk_parsing_successful:
                         0 /* resumption PSK */,
                         ssl->handshake->psk,
                         ssl->handshake->psk_len,
-                        mbedtls_md_info_from_type(
-                            ssl->handshake->ciphersuite_info->mac ),
-                        ssl->handshake->ciphersuite_info,
+                        ssl->handshake->ciphersuite_info->mac,
                         server_computed_binder );
         }
         else
@@ -834,9 +832,7 @@ psk_parsing_successful:
             ret = mbedtls_ssl_create_binder( ssl,
                      1 /* external PSK */,
                      (unsigned char *) psk, psk_len,
-                     mbedtls_md_info_from_type(
-                         ssl->handshake->ciphersuite_info->mac ),
-                     ssl->handshake->ciphersuite_info,
+                     ssl->handshake->ciphersuite_info->mac,
                      server_computed_binder );
         }
 
