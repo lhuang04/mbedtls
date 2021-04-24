@@ -1026,7 +1026,7 @@ int mbedtls_ssl_generate_resumption_master_secret( mbedtls_ssl_context *ssl )
         return( ret );
 
     ret = mbedtls_ssl_tls1_3_derive_resumption_master_secret( md_type,
-                                         ssl->handshake->handshake_secret,
+                                         ssl->handshake->master_secret,
                                          transcript, transcript_len,
                                          &ssl->session_negotiate->app_secrets );
     if( ret != 0 )
