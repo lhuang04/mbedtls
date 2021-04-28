@@ -3320,6 +3320,8 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
+
     ret = mbedtls_ssl_tls13_populate_transform(
                               ssl->transform_handshake,
                               ssl->conf->endpoint,
@@ -3332,10 +3334,8 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
         return( ret );
     }
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    /* We're not yet using MPS for all outgoing encrypted handshake messages,
-     * so we cannot yet remove the old transform generation code in case
-     * MBEDTLS_SSL_USE_MPS is set. */
+#else /* MBEDTLS_SSL_USE_MPS */
+
     {
         mbedtls_ssl_transform *transform_handshake =
             mbedtls_calloc( 1, sizeof( mbedtls_ssl_transform ) );
