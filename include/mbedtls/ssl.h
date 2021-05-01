@@ -1127,42 +1127,6 @@ typedef struct mbedtls_dtls_srtp_info_t
 mbedtls_dtls_srtp_info;
 
 #endif /* MBEDTLS_SSL_DTLS_SRTP */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
-/**
-* \brief   The data structure holding the cryptographic material (key and IV)
-*          used for record protection in TLS 1.3.
-*/
-typedef struct mbedtls_ssl_key_set {
-    /*! The key for client->server records. */
-    unsigned char clientWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
-    /*! The key for server->client records. */
-    unsigned char serverWriteKey[ MBEDTLS_MAX_KEY_LENGTH ];
-    /*! The IV  for client->server records. */
-    unsigned char clientWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
-    /*! The IV  for server->client records. */
-    unsigned char serverWriteIV[ MBEDTLS_MAX_IV_LENGTH ];
-
-    size_t keyLen; /*!< The length of clientWriteKey and
-                    *   serverWriteKey, in Bytes. */
-    size_t ivLen;  /*!< The length of clientWriteIV and
-                    *   serverWriteIV, in Bytes. */
-
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    int epoch;
-    unsigned char iv[ MBEDTLS_MAX_IV_LENGTH ];
-
-    /* The [sender]_sn_key is indirectly used to
-     * encrypt the sequence number in the record layer.
-     *
-     * The client_sn_key is used to encrypt the
-     * sequence number for outgoing transmission.
-     * server_sn_key is used for incoming payloads.
-     */
-    unsigned char server_sn_key[ MBEDTLS_MAX_KEY_LENGTH ];
-    unsigned char client_sn_key[ MBEDTLS_MAX_KEY_LENGTH ];
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-} mbedtls_ssl_key_set;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 typedef struct
 {
     unsigned char client_application_traffic_secret_N[ MBEDTLS_MD_MAX_SIZE ];

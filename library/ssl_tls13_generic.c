@@ -40,6 +40,7 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
 #include "mbedtls/hkdf.h"
+#include "ssl_tls13_keys.h"
 #include <string.h>
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C) &&                \
