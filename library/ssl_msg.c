@@ -1549,16 +1549,6 @@ int mbedtls_ssl_decrypt_buf( mbedtls_ssl_context const *ssl,
             dynamic_iv = rec->ctr;
         }
 
-        /* Check that there's space for the authentication tag. */
-        if( rec->data_len < transform->taglen )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "msglen (%d) < taglen (%d) ",
-                                        rec->data_len,
-                                        transform->taglen ) );
-            return( MBEDTLS_ERR_SSL_INVALID_MAC );
-        }
-        rec->data_len -= transform->taglen;
-
         /*
          * Prepare nonce from dynamic and static parts.
          */
