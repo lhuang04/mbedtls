@@ -2897,7 +2897,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         ( (unsigned) buf[0] << 24 ) | ( (unsigned) buf[1] << 16 ) |
         ( (unsigned) buf[2] << 8  ) | ( (unsigned) buf[3] << 0 );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %d", ssl->session->ticket_lifetime ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->lifetime: %d",
+                                ssl->session->ticket_lifetime ) );
 
     /* Ticket Age Add */
     ssl->session->ticket_age_add =
@@ -2906,7 +2907,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                      ( (unsigned) buf[6] << 8  ) |
                      ( (unsigned) buf[7] << 0  );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u", ssl->session->ticket_age_add ) );
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->ticket_age_add: %u",
+                                ssl->session->ticket_age_add ) );
 
     /* Ticket Nonce */
     /* Check if we previously received a ticket already. If we did, then we should
