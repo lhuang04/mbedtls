@@ -2864,7 +2864,7 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
                                          size_t buflen )
 {
     int ret;
-    uint16_t ticket_len, ext_len;
+    size_t ticket_len, ext_len;
     unsigned char *ticket;
     const mbedtls_ssl_ciphersuite_t *suite_info;
     size_t used = 0;
@@ -2941,13 +2941,13 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
         memcpy( ssl->session->ticket_nonce, &buf[9], ssl->session->ticket_nonce_len );
 
         MBEDTLS_SSL_DEBUG_BUF( 3, "ticket->nonce:", (unsigned char*)&buf[9],
-        ssl->session->ticket_nonce_len );
+                               ssl->session->ticket_nonce_len );
 
     }
 
     /* Ticket */
-    ticket_len = ( buf[9 + ssl->session->ticket_nonce_len] << 8 ) |
-                 ( buf[10 + ssl->session->ticket_nonce_len] );
+    ticket_len = ( (size_t) buf[9 + ssl->session->ticket_nonce_len] << 8 ) |
+                 ( (size_t) buf[10 + ssl->session->ticket_nonce_len] );
 
     used += ticket_len;
 
@@ -2960,8 +2960,8 @@ static int ssl_new_session_ticket_parse( mbedtls_ssl_context* ssl,
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "ticket->length: %d", ticket_len ) );
 
     /* Ticket Extension */
-    ext_len = ( (unsigned) buf[ 11 + ssl->session->ticket_nonce_len + ticket_len ] << 8 ) |
-              ( (unsigned) buf[ 12 + ssl->session->ticket_nonce_len + ticket_len ] );
+    ext_len = ( (size_t) buf[ 11 + ssl->session->ticket_nonce_len + ticket_len ] << 8 ) |
+              ( (size_t) buf[ 12 + ssl->session->ticket_nonce_len + ticket_len ] );
 
     used += ext_len;
 
