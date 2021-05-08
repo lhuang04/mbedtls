@@ -1217,15 +1217,17 @@ exit:
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
 
 int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
-    mbedtls_ssl_context *ssl )
+    mbedtls_ssl_context *ssl, int use_psk )
 {
     int ret = 0;
     mbedtls_md_type_t const md_type = ssl->handshake->ciphersuite_info->mac;
 
-    unsigned char const *psk;
-    size_t psk_len;
-
-    mbedtls_ssl_get_psk( ssl, &psk, &psk_len );
+    unsigned char const *psk = NULL;
+    size_t psk_len = 0;
+    if( use_psk )
+    {
+        mbedtls_ssl_get_psk( ssl, &psk, &psk_len );
+    }
 
     ret = mbedtls_ssl_tls1_3_evolve_secret( md_type,
                               NULL,          /* Old secret */

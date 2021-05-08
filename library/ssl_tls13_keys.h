@@ -438,12 +438,13 @@ int mbedtls_ssl_tls1_3_evolve_secret(
  *        can be used to derive the 0-RTT traffic keys.
  *
  * \param ssl  The SSL context to operate on.
+ * \param use_psk Use PSK or not.
  *
  * \returns    \c 0 on success.
  * \returns    A negative error code on failure.
  */
 int mbedtls_ssl_tls1_3_key_schedule_stage_early_data(
-    mbedtls_ssl_context *ssl );
+    mbedtls_ssl_context *ssl, int use_psk );
 
 /**
  * \brief Transition into handshake stage of TLS 1.3 key schedule.

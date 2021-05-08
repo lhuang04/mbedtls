@@ -3003,7 +3003,9 @@ static int ssl_client_hello_postprocess( mbedtls_ssl_context* ssl,
         return( 0 );
     }
 
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl, 
+        ( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
+          ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK) );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,

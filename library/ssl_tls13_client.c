@@ -209,7 +209,7 @@ static int ssl_write_early_data_prepare( mbedtls_ssl_context* ssl )
     mbedtls_ssl_key_set traffic_keys;
 
     /* Start the TLS 1.3 key schedule: Set the PSK and derive early secret. */
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl, 1 );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1,
@@ -3333,7 +3333,9 @@ static int ssl_server_hello_postprocess( mbedtls_ssl_context* ssl )
      *       server accepted it. In this case, we could skip generating
      *       the early secret. */
 
-    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl );
+    ret = mbedtls_ssl_tls1_3_key_schedule_stage_early_data( ssl, 
+        ( ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
+          ssl->session_negotiate->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK) );
     if( ret != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls1_3_establish_early_secret",
