@@ -2656,16 +2656,18 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
     ret = mbedtls_ssl_tls1_3_key_schedule_stage_application( ssl );
     if( ret != 0 )
     {
-      MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_generate_application_traffic_keys", ret );
-      return( ret );
+        MBEDTLS_SSL_DEBUG_RET( 1,
+           "mbedtls_ssl_tls1_3_key_schedule_stage_application", ret );
+        return( ret );
     }
 
-    ret = mbedtls_ssl_tls13_build_transform( ssl, &traffic_keys,
-        ssl->transform_application, 0 );
+    ret = mbedtls_ssl_tls1_3_generate_application_keys(
+        ssl, &traffic_keys );
     if( ret != 0 )
     {
-      MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_build_transform", ret );
-      return( ret );
+        MBEDTLS_SSL_DEBUG_RET( 1,
+            "mbedtls_ssl_tls1_3_generate_application_keys", ret );
+        return( ret );
     }
 
 #if !defined(MBEDTLS_SSL_USE_MPS)
