@@ -3204,8 +3204,8 @@ static int ssl_server_hello_session_id_check( mbedtls_ssl_context* ssl,
 }
 
 static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
-                                   const unsigned char* buf,
-                                   size_t buflen )
+        const unsigned char* buf,
+        size_t buflen )
 {
 
     int ret; /* return value */
@@ -3305,7 +3305,7 @@ static int ssl_server_hello_parse( mbedtls_ssl_context* ssl,
     {
         MBEDTLS_SSL_DEBUG_MSG( 1, ( "ciphersuite info for %04x not found", i ) );
         SSL_PEND_FATAL_ALERT( MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR,
-                              MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+                MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
