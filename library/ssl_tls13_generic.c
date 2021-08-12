@@ -35,7 +35,9 @@
 
 #include "ssl_misc.h"
 #include "ssl_tls13_keys.h"
+#if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #include "ecp_internal.h"
 
@@ -2184,6 +2186,11 @@ int mbedtls_ssl_finished_out_process( mbedtls_ssl_context* ssl )
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                               buf_len, msg_len ) );
     MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_flush_output( ssl ) );
+#if defined(MBEDTLS_SSL_PROTO_QUIC)
+    if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
+        mbedtls_set_quic_traffic_key(ssl, MBEDTLS_SSL_CRYPTO_LEVEL_APPLICATION);
+#endif /* MBEDTLS_SSL_PROTO_QUIC */
+
 
 cleanup:
 
@@ -2226,11 +2233,6 @@ static int ssl_finished_out_postprocess( mbedtls_ssl_context* ssl )
                     "mbedtls_ssl_tls1_3_generate_resumption_master_secret ", ret );
             return ( ret );
         }
-
-#if defined(MBEDTLS_SSL_PROTO_QUIC)
-        if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_QUIC)
-            mbedtls_set_quic_traffic_key(ssl, MBEDTLS_SSL_CRYPTO_LEVEL_APPLICATION);
-#endif /* MBEDTLS_SSL_PROTO_QUIC */
 
         mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_FLUSH_BUFFERS );
     }
@@ -2477,8 +2479,8 @@ static int ssl_finished_in_postprocess_cli( mbedtls_ssl_context *ssl )
 
 static int ssl_finished_in_postprocess( mbedtls_ssl_context* ssl )
 {
-    int ret;
 #if defined(MBEDTLS_SSL_SRV_C)
+    int ret;
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
     {
         /* Compute resumption_master_secret */

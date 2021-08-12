@@ -40,7 +40,9 @@
 #include "mbedtls/version.h"
 
 #include "ssl_misc.h"
+#if defined(MBEDTLS_SSL_USE_MPS)
 #include "mps_all.h"
+#endif /* MEDTLS_SSL_USE_MPS */
 
 #include <string.h>
 
@@ -7338,7 +7340,7 @@ static int ssl_preset_suiteb_signature_algorithms[] = {
 
     /* RSA algorithms */
 #if defined(MBEDTLS_X509_RSASSA_PSS_SUPPORT)
-    MBEDTLS_TLS13_SIG_IGNATURE_RSA_PSS_RSAE_SHA256,
+    MBEDTLS_TLS13_SIG_RSA_PSS_RSAE_SHA256,
 #endif
 
     MBEDTLS_TLS13_SIG_NONE
