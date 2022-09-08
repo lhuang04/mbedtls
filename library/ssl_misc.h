@@ -2243,6 +2243,16 @@ int mbedtls_ssl_tls13_generate_and_write_ecdh_key_exchange(
                 size_t *out_len );
 #endif /* MBEDTLS_ECDH_C */
 
+#if defined(MBEDTLS_ECP_C)
+
+int mbedtls_ecdh_import_public_raw( mbedtls_ecdh_context *ctx,
+                                    const unsigned char *buf,
+                                    const unsigned char *end );
+
+mbedtls_ecp_group_id mbedtls_ecp_named_group_to_id(
+    uint16_t named_curve );
+#endif /* MBEDTLS_ECP_C */
+
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 

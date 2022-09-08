@@ -1743,6 +1743,20 @@ int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_ZERO_RTT */
 
+#if defined(MBEDTLS_ECP_C)
+
+mbedtls_ecp_group_id mbedtls_ecp_named_group_to_id(
+    uint16_t named_curve )
+{
+    const mbedtls_ecp_curve_info *curve_info;
+    curve_info = mbedtls_ecp_curve_info_from_tls_id( named_curve );
+    if( curve_info == NULL )
+        return( MBEDTLS_ECP_DP_NONE );
+    return( curve_info->grp_id );
+}
+
+#endif /* MBEDTLS_ECP_C */
+
 /* Reset SSL context and update hash for handling HRR.
  *
  * Replace Transcript-Hash(X) by

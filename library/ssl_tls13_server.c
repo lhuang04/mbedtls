@@ -45,7 +45,6 @@
 
 #if defined(MBEDTLS_ECP_C)
 #include "mbedtls/ecp.h"
-#include "ecp_internal.h"
 #endif /* MBEDTLS_ECP_C */
 
 #include "mbedtls/hkdf.h"
