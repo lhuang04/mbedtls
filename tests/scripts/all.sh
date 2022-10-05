@@ -1759,6 +1759,53 @@ component_build_key_exchanges () {
     tests/scripts/key-exchanges.pl
 }
 
+<<<<<<< HEAD
+=======
+component_test_depends_py_cipher_id () {
+    msg "test/build: depends.py cipher_id (gcc)"
+    tests/scripts/depends.py cipher_id
+}
+
+component_test_depends_py_cipher_chaining () {
+    msg "test/build: depends.py cipher_chaining (gcc)"
+    tests/scripts/depends.py cipher_chaining
+}
+
+component_test_depends_py_cipher_padding () {
+    msg "test/build: depends.py cipher_padding (gcc)"
+    tests/scripts/depends.py cipher_padding
+}
+
+component_test_depends_py_curves () {
+    msg "test/build: depends.py curves (gcc)"
+    tests/scripts/depends.py curves
+}
+
+component_test_depends_py_hashes () {
+    msg "test/build: depends.py hashes (gcc)"
+    tests/scripts/depends.py hashes
+}
+
+component_test_depends_py_kex () {
+    msg "test/build: depends.py kex (gcc)"
+    tests/scripts/depends.py kex
+}
+
+component_test_depends_py_pkalgs () {
+    msg "test/build: depends.py pkalgs (gcc)"
+    tests/scripts/depends.py pkalgs
+}
+
+component_test_make_cxx () {
+    msg "build: Unix make, full, gcc + g++"
+    scripts/config.py full
+    make TEST_CPP=1 lib programs
+
+    msg "test: cpp_dummy_build"
+    programs/test/cpp_dummy_build
+}
+
+>>>>>>> 85d69309e8 (Split depends.py all.sh job into seven)
 component_test_no_use_psa_crypto_full_cmake_asan() {
     # full minus MBEDTLS_USE_PSA_CRYPTO: run the same set of tests as basic-build-test.sh
     msg "build: cmake, full config minus MBEDTLS_USE_PSA_CRYPTO, ASan"
