@@ -2893,6 +2893,52 @@ component_test_malloc_0_null () {
     tests/ssl-opt.sh -e 'proxy'
 }
 
+component_test_tls13 () {
+    msg "build: TLS 1.3 (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+}
+
+component_test_tls13_client_only () {
+    msg "build: TLS 1.3 client-only (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py unset MBEDTLS_SSL_SRV_C
+    scripts/config.py   set MBEDTLS_SSL_CLI_C
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 client-only, compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+}
+
+component_test_tls13_server_only () {
+    msg "build: TLS 1.3 server-only (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_SSL_SRV_C
+    scripts/config.py unset MBEDTLS_SSL_CLI_C
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: compat.sh"
+    if_build_succeeded tests/compat.sh -m tls1_3 -t ECDSA
+}
+
+component_test_tls13_rsa_enabled () {
+    msg "build: TLS 1.3, with RSA (ASanDbg) "
+    scripts/config.py   set MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+    scripts/config.py   set MBEDTLS_RSA_C
+    scripts/config.py   set MBEDTLS_X509_RSASSA_PSS_SUPPORT
+    cmake CC=gcc CMAKE_BUILD_TYPE=ASanDbg .
+    make
+
+    msg "test: TLS 1.3 client, OpenSSL server with RSA certificate"
+    if_build_succeeded tests/ssl-opt.sh --filter "RSA-certificate, OpenSSL server"
+}
+
 component_test_aes_fewer_tables () {
     msg "build: default config with AES_FEWER_TABLES enabled"
     scripts/config.py set MBEDTLS_AES_FEWER_TABLES

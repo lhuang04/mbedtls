@@ -1056,6 +1056,7 @@ exit:
 }
 /* END_CASE */
 
+
 /* BEGIN_CASE */
 void mbedtls_ecp_tls_read_group(data_t *buf, int result, int bits,
                                 int record_len)
