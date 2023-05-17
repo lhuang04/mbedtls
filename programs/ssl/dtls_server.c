@@ -226,8 +226,15 @@ int main(void)
         goto exit;
     }
 
+<<<<<<< HEAD
     mbedtls_ssl_conf_dtls_cookies(&conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
                                   &cookie_ctx);
+=======
+#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
+    mbedtls_ssl_conf_dtls_cookies( &conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
+                               &cookie_ctx );
+#endif
+>>>>>>> 3edeea9acb (Squashed commit of the following:)
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0) {
         printf(" failed\n  ! mbedtls_ssl_setup returned %d\n\n", ret);

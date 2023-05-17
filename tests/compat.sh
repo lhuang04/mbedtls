@@ -188,6 +188,9 @@ minor_ver()
         tls12|dtls12)
             echo 3
             ;;
+        tls1_3)
+            echo 4
+            ;;
         *)
             echo "error: invalid mode: $MODE" >&2
             # exiting is no good here, typically called in a subshell
@@ -204,6 +207,11 @@ filter()
       EXCLMODE="$EXCLUDE"'\|RC4\|ARCFOUR'
   else
       EXCLMODE="$EXCLUDE"
+  fi
+
+  if [ `minor_ver "$MODE"` -ge 4 ]
+  then
+      EXCLMODE="$EXCLUDE"'\|RC4\|ARCFOUR'
   fi
 
   for i in $LIST;
@@ -295,7 +303,7 @@ add_common_ciphersuites()
                     ECDHE-ECDSA-AES128-GCM-SHA256   \
                     ECDHE-ECDSA-AES256-GCM-SHA384   \
                     "
-            fi
+            fi         
             ;;
 
         "RSA")
@@ -494,7 +502,7 @@ add_openssl_ciphersuites()
                     ECDHE-ECDSA-ARIA128-GCM-SHA256  \
                     ECDHE-ECDSA-CHACHA20-POLY1305   \
                     "
-            fi
+            fi      
             ;;
 
         "RSA")
@@ -892,6 +900,9 @@ setup_arguments()
             O_MODE="tls1_2"
             G_PRIO_MODE="+VERS-TLS1.2"
             ;;
+        "tls1_3")
+            G_PRIO_MODE="+VERS-TLS1.3"
+            ;;            
         "dtls1")
             O_MODE="dtls1"
             G_PRIO_MODE="+VERS-DTLS1.0"
@@ -917,7 +928,19 @@ setup_arguments()
     M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE arc4=1"
     O_SERVER_ARGS="-accept $PORT -cipher NULL,ALL -$O_MODE"
     G_SERVER_ARGS="-p $PORT --http $G_MODE"
-    G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}+ARCFOUR-128:+NULL:+MD5:+PSK:+DHE-PSK:+ECDHE-PSK:+SHA256:+SHA384:+RSA-PSK:-VERS-TLS-ALL:$G_PRIO_MODE"
+
+    # The default prime for `openssl s_server` depends on the version:
+    # * OpenSSL <= 1.0.2a: 512-bit
+    # * OpenSSL 1.0.2b to 1.1.1b: 1024-bit
+    # * OpenSSL >= 1.1.1c: 2048-bit
+    # Mbed TLS wants >=1024, so force that for older versions. Don't force
+    # it for newer versions, which reject a 1024-bit prime. Indifferently
+    # force it or not for intermediate versions.
+    case $($OPENSSL_CMD version) in
+        "OpenSSL 1.0"*)
+            O_SERVER_ARGS="$O_SERVER_ARGS -dhparam data_files/dhparams.pem"
+            ;;
+    esac
 
     # The default prime for `openssl s_server` depends on the version:
     # * OpenSSL <= 1.0.2a: 512-bit
@@ -1191,7 +1214,15 @@ run_client() {
             else
                 G_HOST="localhost"
             fi
-            CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_PRIO_MODE:$2 $G_HOST"
+
+            if [ `minor_ver "$MODE"` -ge 4 ]
+            then
+                G_CLIENT_PRIO="NONE:${2}:+GROUP-SECP256R1:+GROUP-SECP384R1:+CTYPE-ALL:+ECDHE-ECDSA:+CIPHER-ALL:+MAC-ALL:-SHA1:-AES-128-CBC:+SIGN-ECDSA-SECP256R1-SHA256:+SIGN-ECDSA-SECP384R1-SHA384:+ECDHE-ECDSA:${G_PRIO_MODE}" 
+                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_CLIENT_PRIO $G_HOST"            
+            else 
+                CLIENT_CMD="$GNUTLS_CLI $G_CLIENT_ARGS --priority $G_PRIO_MODE:$2 $G_HOST"        
+            fi     
+            
             log "$CLIENT_CMD"
             echo "$CLIENT_CMD" > $CLI_OUT
             printf 'GET HTTP/1.0\r\n\r\n' | $CLIENT_CMD >> $CLI_OUT 2>&1 &
@@ -1381,8 +1412,26 @@ for MODE in $MODES; do
                     fi
 
                     reset_ciphersuites
-                    add_common_ciphersuites
-                    add_openssl_ciphersuites
+                    if [ `minor_ver "$MODE"` -ge 4 ]
+                    then
+                        M_CIPHERS="$M_CIPHERS               \
+                            TLS1-3-AES-128-GCM-SHA256          \
+                            TLS1-3-AES-256-GCM-SHA384          \
+                            TLS1-3-AES-128-CCM-SHA256          \
+                            TLS1-3-AES-128-CCM-8-SHA256        \
+                            TLS1-3-CHACHA20-POLY1305-SHA256    \
+                            "
+                        O_CIPHERS="$O_CIPHERS               \
+                            TLS_AES_128_GCM_SHA256          \
+                            TLS_AES_256_GCM_SHA384          \
+                            TLS_AES_128_CCM_SHA256          \
+                            TLS_AES_128_CCM_8_SHA256        \
+                            TLS_CHACHA20_POLY1305_SHA256    \
+                            "
+                    else 
+                            add_common_ciphersuites
+                            add_openssl_ciphersuites
+                    fi                                
                     filter_ciphersuites
 
                     if [ "X" != "X$M_CIPHERS" ]; then
@@ -1408,9 +1457,28 @@ for MODE in $MODES; do
                 [Gg]nu*)
 
                     reset_ciphersuites
-                    add_common_ciphersuites
-                    add_gnutls_ciphersuites
+                    if [ `minor_ver "$MODE"` -ge 4 ]
+                    then
+                        M_CIPHERS="$M_CIPHERS                  \
+                            TLS1-3-AES-128-GCM-SHA256          \
+                            TLS1-3-AES-256-GCM-SHA384          \
+                            TLS1-3-AES-128-CCM-SHA256          \
+                            TLS1-3-AES-128-CCM-8-SHA256        \
+                            TLS1-3-CHACHA20-POLY1305-SHA256    \
+                            "
+                        G_CIPHERS="$G_CIPHERS                \
+                            +AES-128-GCM:+SHA256             \
+                            +AES-256-GCM:+SHA384             \
+                            +AES-128-CCM:+SHA256             \
+                            +AES-128-CCM-8:+SHA256           \
+                            +CHACHA20-POLY1305:+SHA256       \
+                            "
+                    else 
+                            add_common_ciphersuites
+                            add_gnutls_ciphersuites
+                    fi
                     filter_ciphersuites
+
 
                     if [ "X" != "X$M_CIPHERS" ]; then
                         start_server "GnuTLS"
@@ -1427,16 +1495,33 @@ for MODE in $MODES; do
                         done
                         stop_server
                     fi
-
                     ;;
 
                 mbed*)
 
                     reset_ciphersuites
-                    add_common_ciphersuites
-                    add_openssl_ciphersuites
-                    add_gnutls_ciphersuites
-                    add_mbedtls_ciphersuites
+                    if [ `minor_ver "$MODE"` -ge 4 ]
+                    then
+                        M_CIPHERS="$M_CIPHERS               \
+                            TLS_AES_128_GCM_SHA256          \
+                            TLS_AES_256_GCM_SHA384          \
+                            TLS_AES_128_CCM_SHA256          \
+                            TLS_AES_128_CCM_8_SHA256        \
+                            TLS_CHACHA20_POLY1305_SHA256    \
+                            "
+                        O_CIPHERS="$O_CIPHERS               \
+                            TLS_AES_128_GCM_SHA256          \
+                            TLS_AES_256_GCM_SHA384          \
+                            TLS_AES_128_CCM_SHA256          \
+                            TLS_AES_128_CCM_8_SHA256        \
+                            TLS_CHACHA20_POLY1305_SHA256    \
+                            "
+                    else 
+                            add_common_ciphersuites
+                            add_openssl_ciphersuites
+                            add_gnutls_ciphersuites
+                            add_mbedtls_ciphersuites
+                    fi                                
                     filter_ciphersuites
 
                     if [ "X" != "X$M_CIPHERS" ]; then

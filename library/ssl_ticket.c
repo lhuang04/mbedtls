@@ -381,7 +381,6 @@ int mbedtls_ssl_ticket_parse(void *p_ticket,
         ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
         goto cleanup;
     }
-
     /* Actually load session */
     if ((ret = mbedtls_ssl_session_load(session, ticket, clear_len)) != 0) {
         goto cleanup;
