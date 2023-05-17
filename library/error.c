@@ -418,6 +418,24 @@ const char *mbedtls_high_level_strerr(int error_code)
             return( "SSL - No CA Chain is set, but required to operate" );
         case -(MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE):
             return( "SSL - An unexpected message was received from our peer" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_ENCRYPTED_EXTENSIONS):
+            return( "SSL -  Processing of the Encrypted Extensions handshake message failed" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_TOO_MANY_HRR):
+            return( "SSL -  Too many Hello Retry Request messages received" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_SUPPORTED_VERSIONS_EXT):
+            return( "SSL -  Problem encountered with the supported versions extension" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_PSK_KEY_EXCHANGE_MODES_EXT):
+            return( "SSL -  Problem encountered with the psk key exchange modes extension" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_CID_EXT):
+            return( "SSL -  The CID extension could not be parsed correctly" );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_MISSING_EXTENSION_EXT):
+            return( "SSL -  Handshake is missing a required extension" );
+        case -(MBEDTLS_ERR_SSL_BAD_EARLY_DATA):
+            return( "TLS - Processing of the Early Data payload failed." );
+        case -(MBEDTLS_ERR_SSL_BAD_ACK):
+            return( "TLS - Processing of the Ack message failed." );
+        case -(MBEDTLS_ERR_SSL_BAD_HS_PRE_SHARED_KEY_EXT):
+            return( "TLS - Received invalid pre_shared_key extension" );
         case -(MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE):
             return( "SSL - A fatal alert message was received from our peer" );
         case -(MBEDTLS_ERR_SSL_PEER_VERIFY_FAILED):
@@ -426,6 +444,10 @@ const char *mbedtls_high_level_strerr(int error_code)
             return( "SSL - The peer notified us that the connection is going to be closed" );
         case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO):
             return( "SSL - Processing of the ClientHello handshake message failed" );
+#if defined(MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        case -(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_HELLO_CCS):
+            return( "SSL - Processing of the ClientHello handshake message failed; CCS received instead" );
+#endif /* MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
         case -(MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO):
             return( "SSL - Processing of the ServerHello handshake message failed" );
         case -(MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE):
