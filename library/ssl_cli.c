@@ -19,6 +19,8 @@
 
 #include "common.h"
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 #if defined(MBEDTLS_SSL_CLI_C)
 
 #if defined(MBEDTLS_PLATFORM_C)
@@ -4525,3 +4527,4 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
     return( ret );
 }
 #endif /* MBEDTLS_SSL_CLI_C */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
