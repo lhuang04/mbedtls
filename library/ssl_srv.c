@@ -7,6 +7,8 @@
 
 #include "common.h"
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 #if defined(MBEDTLS_SSL_SRV_C)
 
 #include "mbedtls/platform.h"
@@ -924,7 +926,7 @@ static int ssl_pick_cert(mbedtls_ssl_context *ssl,
          * different uses based on keyUsage, eg if they want to avoid signing
          * and decrypting with the same RSA key.
          */
-        if (mbedtls_ssl_check_cert_usage(cur->cert, ciphersuite_info,
+        if (mbedtls_ssl_check_cert_usage(cur->cert, ciphersuite_info->key_exchange,
                                          MBEDTLS_SSL_IS_SERVER, &flags) != 0) {
             MBEDTLS_SSL_DEBUG_MSG(3, ("certificate mismatch: "
                                       "(extended) key usage extension"));
@@ -4617,3 +4619,5 @@ int mbedtls_ssl_handshake_server_step(mbedtls_ssl_context *ssl)
     return ret;
 }
 #endif /* MBEDTLS_SSL_SRV_C */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */

@@ -51,7 +51,9 @@ typedef struct mbedtls_ssl_ticket_context {
     unsigned char active;           /*!< index of the currently active key  */
 
     uint32_t ticket_lifetime;       /*!< lifetime of tickets in seconds     */
-
+#if defined(MBEDTLS_SSL_NEW_SESSION_TICKET) && defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+    mbedtls_ssl_ticket_flags flags; /*!< ticket flags                       */
+#endif /* MBEDTLS_SSL_NEW_SESSION_TICKET && MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL  */
     /** Callback for getting (pseudo-)random numbers                        */
     int  (*f_rng)(void *, unsigned char *, size_t);
     void *p_rng;                    /*!< context for the RNG function       */
