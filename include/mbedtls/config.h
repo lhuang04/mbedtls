@@ -933,7 +933,7 @@
  *             See dhm.h for more details.
  *
  */
-#define MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
@@ -978,7 +978,7 @@
  *      MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_RSA_PSK_WITH_RC4_128_SHA
  */
-#define MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
@@ -1006,7 +1006,7 @@
  *      MBEDTLS_TLS_RSA_WITH_RC4_128_SHA
  *      MBEDTLS_TLS_RSA_WITH_RC4_128_MD5
  */
-#define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
@@ -1039,7 +1039,7 @@
  *             See dhm.h for more details.
  *
  */
-#define MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
@@ -1064,7 +1064,7 @@
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_RC4_128_SHA
  */
-#define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
@@ -1112,7 +1112,7 @@
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_CAMELLIA_256_GCM_SHA384
  */
-#define MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
@@ -1136,7 +1136,7 @@
  *      MBEDTLS_TLS_ECDH_RSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDH_RSA_WITH_CAMELLIA_256_GCM_SHA384
  */
-#define MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED
@@ -1512,7 +1512,14 @@
  *
  * Uncomment to enable support for record checking.
  */
-#define MBEDTLS_SSL_RECORD_CHECKING
+//#define MBEDTLS_SSL_RECORD_CHECKING
+
+/**
+ * \def MBEDTLS_SSL_USE_MPS
+ *
+ * TODO: Document
+ */
+#define MBEDTLS_SSL_USE_MPS
 
 /**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
@@ -1578,7 +1585,7 @@
  *
  * Comment to disable the context serialization APIs.
  */
-#define MBEDTLS_SSL_CONTEXT_SERIALIZATION
+//#define MBEDTLS_SSL_CONTEXT_SERIALIZATION
 
 /**
  * \def MBEDTLS_SSL_DEBUG_ALL
@@ -1612,7 +1619,7 @@
  *
  * Comment this macro to disable support for Encrypt-then-MAC
  */
-#define MBEDTLS_SSL_ENCRYPT_THEN_MAC
+//#define MBEDTLS_SSL_ENCRYPT_THEN_MAC
 
 /** \def MBEDTLS_SSL_EXTENDED_MASTER_SECRET
  *
@@ -1630,7 +1637,7 @@
  *
  * Comment this macro to disable support for Extended Master Secret.
  */
-#define MBEDTLS_SSL_EXTENDED_MASTER_SECRET
+//#define MBEDTLS_SSL_EXTENDED_MASTER_SECRET
 
 /**
  * \def MBEDTLS_SSL_FALLBACK_SCSV
@@ -1695,7 +1702,7 @@
  *
  * Comment this macro to disable 1/n-1 record splitting.
  */
-#define MBEDTLS_SSL_CBC_RECORD_SPLITTING
+//#define MBEDTLS_SSL_CBC_RECORD_SPLITTING
 
 /**
  * \def MBEDTLS_SSL_RENEGOTIATION
@@ -1717,7 +1724,7 @@
  *          configuration of this extension).
  *
  */
-#define MBEDTLS_SSL_RENEGOTIATION
+//#define MBEDTLS_SSL_RENEGOTIATION
 
 /**
  * \def MBEDTLS_SSL_SRV_SUPPORT_SSLV2_CLIENT_HELLO
@@ -1749,7 +1756,7 @@
  *
  * Comment this macro to disable support for the max_fragment_length extension
  */
-#define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
+//#define MBEDTLS_SSL_MAX_FRAGMENT_LENGTH
 
 /**
  * \def MBEDTLS_SSL_PROTO_SSL3
@@ -1776,7 +1783,7 @@
  *
  * Comment this macro to disable support for TLS 1.0
  */
-#define MBEDTLS_SSL_PROTO_TLS1
+//#define MBEDTLS_SSL_PROTO_TLS1
 
 /**
  * \def MBEDTLS_SSL_PROTO_TLS1_1
@@ -1788,7 +1795,7 @@
  *
  * Comment this macro to disable support for TLS 1.1 / DTLS 1.0
  */
-#define MBEDTLS_SSL_PROTO_TLS1_1
+//#define MBEDTLS_SSL_PROTO_TLS1_1
 
 /**
  * \def MBEDTLS_SSL_PROTO_TLS1_2
@@ -1800,7 +1807,7 @@
  *
  * Comment this macro to disable support for TLS 1.2 / DTLS 1.2
  */
-#define MBEDTLS_SSL_PROTO_TLS1_2
+//#define MBEDTLS_SSL_PROTO_TLS1_2
 
 /**
  * \def MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
@@ -1819,7 +1826,82 @@
  * Uncomment this macro to enable experimental and partial
  * functionality specific to TLS 1.3.
  */
-//#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+#define MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL
+
+/* \def MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE
+ *
+ * Enable TLS 1.3 middlebox compatibility mode.
+ *
+ * As specified in Section D.4 of RFC 8449, TLS 1.3 offers a compatibility
+ * mode to make a TLS 1.3 connection more likely to pass through middle boxes
+ * expecting TLS 1.2 traffic.
+ *
+ * Turning on the compatibility mode comes at the cost of a few added bytes
+ * on the wire, but it doesn't affect compatibility with TLS 1.3 implementations
+ * that don't use it. Therefore, unless transmission bandwidth is critical and
+ * you know that middlebox compatibility issues won't occur, it is therefore
+ * recommended to set this option.
+ *
+ * Comment to disable compatibility mode for TLS 1.3.
+ *
+ * Requires: MBEDTLS_SSL_PROTO_TLS1_3
+ *
+ */
+#define MBEDTLS_SSL_TLS13_COMPATIBILITY_MODE
+
+/**
+*  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
+*
+* Tolerance window for ticket age value.
+* Outside this tolerance window, 0-RTT mode will be disabled.
+*
+*/
+
+#define MBEDTLS_SSL_EARLY_DATA_MAX_DELAY 10000
+
+/**
+* \def MBEDTLS_ZERO_RTT
+*
+* Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
+*
+*/
+#define MBEDTLS_ZERO_RTT
+
+/**
+* \def MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
+*
+* Enables debug output for handshake hashes
+*
+* Requires:
+*
+* Uncomment this macro to print handshake hash information
+*/
+//#define MBEDTLS_SSL_DEBUG_HANDSHAKE_HASHES
+
+/*
+* \def MBEDTLS_SSL_TICKET_NONCE_LENGTH
+*
+* Allows adjusting the length of the nonce field in the ticket.
+*
+* The default value is 32 bytes.
+*/
+#define MBEDTLS_SSL_TICKET_NONCE_LENGTH 32
+
+/*
+* \def MBEDTLS_SSL_NEW_SESSION_TICKET
+*
+* Enable support for TLS 1.3 session tickets.
+* Client-side, provides full support for session tickets (maintainance of a
+* session store remains the responsibility of the application, though).
+* Server-side, you also need to provide callbacks for writing and parsing
+* tickets, including authenticated encryption and key management. Example
+* callbacks are provided by MBEDTLS_SSL_TICKET_C.
+*
+* Comment this macro to
+*  - be able to issue tickets by TLS 1.3 servers, and
+*  - use them in TLS 1.3 clients.
+*/
+#define MBEDTLS_SSL_NEW_SESSION_TICKET
 
 /**
  * \def MBEDTLS_SSL_PROTO_DTLS
@@ -1834,7 +1916,7 @@
  *
  * Comment this macro to disable support for DTLS
  */
-#define MBEDTLS_SSL_PROTO_DTLS
+//#define MBEDTLS_SSL_PROTO_DTLS
 
 /**
  * \def MBEDTLS_SSL_ALPN
@@ -1843,7 +1925,7 @@
  *
  * Comment this macro to disable support for ALPN.
  */
-#define MBEDTLS_SSL_ALPN
+//#define MBEDTLS_SSL_ALPN
 
 /**
  * \def MBEDTLS_SSL_DTLS_ANTI_REPLAY
@@ -1858,7 +1940,7 @@
  *
  * Comment this to disable anti-replay in DTLS.
  */
-#define MBEDTLS_SSL_DTLS_ANTI_REPLAY
+//#define MBEDTLS_SSL_DTLS_ANTI_REPLAY
 
 /**
  * \def MBEDTLS_SSL_DTLS_HELLO_VERIFY
@@ -1876,7 +1958,7 @@
  *
  * Comment this to disable support for HelloVerifyRequest.
  */
-#define MBEDTLS_SSL_DTLS_HELLO_VERIFY
+//#define MBEDTLS_SSL_DTLS_HELLO_VERIFY
 
 /**
  * \def MBEDTLS_SSL_DTLS_SRTP
@@ -1923,7 +2005,7 @@
  *
  * Comment this to disable support for clients reusing the source port.
  */
-#define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
+//#define MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE
 
 /**
  * \def MBEDTLS_SSL_DTLS_BADMAC_LIMIT
@@ -1934,7 +2016,7 @@
  *
  * Requires: MBEDTLS_SSL_PROTO_DTLS
  */
-#define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
+//#define MBEDTLS_SSL_DTLS_BADMAC_LIMIT
 
 /**
  * \def MBEDTLS_SSL_SESSION_TICKETS
@@ -1948,7 +2030,7 @@
  *
  * Comment this macro to disable support for SSL session tickets
  */
-#define MBEDTLS_SSL_SESSION_TICKETS
+//#define MBEDTLS_SSL_SESSION_TICKETS
 
 /**
  * \def MBEDTLS_SSL_EXPORT_KEYS
@@ -1978,7 +2060,7 @@
  *
  * Comment this macro to disable support for truncated HMAC in SSL
  */
-#define MBEDTLS_SSL_TRUNCATED_HMAC
+//#define MBEDTLS_SSL_TRUNCATED_HMAC
 
 /**
  * \def MBEDTLS_SSL_TRUNCATED_HMAC_COMPAT
@@ -2226,7 +2308,7 @@
  *
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
-#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
+//#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
 
 /**
  * \def MBEDTLS_ZLIB_SUPPORT
@@ -3260,7 +3342,7 @@
  *
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
-#define MBEDTLS_RSA_C
+//#define MBEDTLS_RSA_C
 
 /**
  * \def MBEDTLS_SHA1_C
@@ -3314,7 +3396,7 @@
  *
  * This module adds support for SHA-384 and SHA-512.
  */
-#define MBEDTLS_SHA512_C
+ #define MBEDTLS_SHA512_C
 
 /**
  * \def MBEDTLS_SSL_CACHE_C
@@ -3326,7 +3408,7 @@
  *
  * Requires: MBEDTLS_SSL_CACHE_C
  */
-#define MBEDTLS_SSL_CACHE_C
+//#define MBEDTLS_SSL_CACHE_C
 
 /**
  * \def MBEDTLS_SSL_COOKIE_C
@@ -3844,8 +3926,13 @@
 //#define MBEDTLS_SSL_DTLS_MAX_BUFFERING             32768
 
 //#define MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME     86400 /**< Lifetime of session tickets (if enabled) */
-//#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
-//#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+/* TODO: Define those macros in ssl_internal.h when they're not defined here! */
+/* TODO: This is somehow hardcoded to 48 Bytes - is that intentional? It certainly doesn't match the comment. */
+#define MBEDTLS_PSK_MAX_LEN               48 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
+#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
+/* TODO: Document appropriately */
+#define MBEDTLS_PSK_IDENTITY_MAX_LEN     250 /**< Max size of psk identity, in bytes */
+#define MBEDTLS_SSL_TICKET_AGE_TOLERANCE 6000 /**< Tolerance window for ticket lifetime */
 
 /**
  * Complete list of ciphersuites to use, in order of preference.

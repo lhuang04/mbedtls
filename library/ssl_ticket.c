@@ -194,7 +194,6 @@ int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
  * The key_name, iv, and length of encrypted_state are the additional
  * authenticated data.
  */
-
 int mbedtls_ssl_ticket_write( void *p_ticket,
                               const mbedtls_ssl_session *session,
                               unsigned char *start,
@@ -245,6 +244,7 @@ int mbedtls_ssl_ticket_write( void *p_ticket,
     {
          goto cleanup;
     }
+
     state_len_bytes[0] = ( clear_len >> 8 ) & 0xff;
     state_len_bytes[1] = ( clear_len      ) & 0xff;
 
@@ -359,7 +359,6 @@ int mbedtls_ssl_ticket_parse( void *p_ticket,
         ret = MBEDTLS_ERR_SSL_INTERNAL_ERROR;
         goto cleanup;
     }
-
     /* Actually load session */
     if( ( ret = mbedtls_ssl_session_load( session, ticket, clear_len ) ) != 0 )
         goto cleanup;
@@ -399,7 +398,7 @@ void mbedtls_ssl_ticket_free( mbedtls_ssl_ticket_context *ctx )
     mbedtls_mutex_free( &ctx->mutex );
 #endif
 
-    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_ssl_ticket_context ) );
+    mbedtls_platform_zeroize( (void*) ctx, sizeof( mbedtls_ssl_ticket_context ) );
 }
 
 #endif /* MBEDTLS_SSL_TICKET_C */
