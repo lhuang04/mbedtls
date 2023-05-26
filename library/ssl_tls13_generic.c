@@ -37,6 +37,7 @@
 #include "mbedtls/ssl_ticket.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
+#include "mbedtls/constant_time.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_internal.h"
 #include "ssl_tls13_keys.h"
@@ -2622,7 +2623,7 @@ static int ssl_finished_in_parse( mbedtls_ssl_context* ssl,
                            ssl->handshake->state_local.finished_in.digest_len );
 
     /* Semantic validation */
-    if( mbedtls_ssl_safer_memcmp( buf,
+    if( mbedtls_ct_memcmp( buf,
                    ssl->handshake->state_local.finished_in.digest,
                    ssl->handshake->state_local.finished_in.digest_len ) != 0 )
     {
