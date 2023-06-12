@@ -657,12 +657,16 @@ struct mbedtls_ssl_handshake_params
 
     unsigned int out_msg_seq;           /*!<  Outgoing handshake sequence number */
     unsigned int in_msg_seq;            /*!<  Incoming handshake sequence number */
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if (defined(MBEDTLS_SSL_PROTO_DTLS) || defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL))
     unsigned char *verify_cookie;       /*!<  Cli: HelloVerifyRequest cookie
                                               Srv: unused                    */
     unsigned char verify_cookie_len;    /*!<  Cli: cookie length
                                               Srv: flag for sending a cookie */
+#endif /* MBEDTLS_SSL_PROTO_DTLS || MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
 
+#if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint32_t retransmit_timeout;        /*!<  Current value of timeout       */
     mbedtls_ssl_flight_item *flight;    /*!<  Current outgoing flight        */
     mbedtls_ssl_flight_item *cur_msg;   /*!<  Current message in flight      */
