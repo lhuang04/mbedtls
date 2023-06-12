@@ -8626,6 +8626,7 @@ int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
+MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
     const mbedtls_key_exchange_type_t key_exchange,
     int cert_endpoint,
