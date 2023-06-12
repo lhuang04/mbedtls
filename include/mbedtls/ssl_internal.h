@@ -1685,10 +1685,10 @@ static inline mbedtls_x509_crt *mbedtls_ssl_own_cert( mbedtls_ssl_context *ssl )
  * Return 0 if everything is OK, -1 if not.
  */
 MBEDTLS_CHECK_RETURN_CRITICAL
-int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt *cert,
-                          const mbedtls_ssl_ciphersuite_t *ciphersuite,
+int mbedtls_ssl_check_cert_usage( const mbedtls_x509_crt* cert,
+                          const mbedtls_key_exchange_type_t key_exchange,
                           int cert_endpoint,
-                          uint32_t *flags );
+                          uint32_t* flags);
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
 
 void mbedtls_ssl_write_wire_version( int major, int minor, int transport,
