@@ -750,19 +750,6 @@ int main(int argc, char *argv[])
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && \
-    defined(MBEDTLS_ECP_C)
-    /* list of named groups */
-    mbedtls_ecp_group_id named_groups_list[NAMED_GROUPS_LIST_SIZE];
-    /* list of named groups for key share*/
-    mbedtls_ecp_group_id key_share_named_groups_list[NAMED_GROUPS_LIST_SIZE];
-    char *start;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
-
-#if defined(MBEDTLS_ZERO_RTT)
-    char early_data[] = "early data test";
-#endif /* MBEDTLS_ZERO_RTT */
-
     mbedtls_ssl_session saved_session;
 
     unsigned char *session_data = NULL;
@@ -1738,10 +1725,6 @@ usage:
     memset(peer_crt_info, 0, sizeof(peer_crt_info));
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
-    mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test_tls13 );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
-
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if (opt.cid_enabled == 1 || opt.cid_enabled_renego == 1) {
         if (opt.cid_enabled == 1        &&
@@ -1832,13 +1815,30 @@ usage:
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if (opt.eap_tls != 0) {
         mbedtls_ssl_conf_export_keys_ext_cb(&conf, eap_tls_key_derivation,
                                             &eap_tls_keying);
-    } else if (opt.nss_keylog != 0) {
-        mbedtls_ssl_conf_export_keys_ext_cb(&conf,
-                                            nss_keylog_export,
-                                            NULL);
+    }
+    else
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
+    if( opt.nss_keylog != 0 )
+    {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL)
+        mbedtls_ssl_conf_export_secrets_cb( &conf,
+                                            nss_keylog_export_tls13,
+                                            NULL );
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
+        mbedtls_ssl_conf_export_keys_ext_cb( &conf,
+                                             nss_keylog_export,
+                                             NULL );
+#endif /* MBEDTLS_SSL_PROTO_TLS1 || MBEDTLS_SSL_PROTO_TLS1_1 || \
+          MBEDTLS_SSL_PROTO_TLS1_2 */
     }
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
     else if (opt.use_srtp != 0) {
@@ -2151,6 +2151,8 @@ usage:
 #endif
 
 #if defined(MBEDTLS_SSL_EXPORT_KEYS)
+#if defined(MBEDTLS_SSL_PROTO_TLS1) || defined(MBEDTLS_SSL_PROTO_TLS1_1) || \
+    defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if (opt.eap_tls != 0) {
         size_t j = 0;
 
