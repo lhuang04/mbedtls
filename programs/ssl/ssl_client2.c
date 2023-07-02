@@ -2077,10 +2077,6 @@ int main( int argc, char *argv[] )
     memset( peer_crt_info, 0, sizeof( peer_crt_info ) );
 #endif /* MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL) && defined(MBEDTLS_ECP_C)
-    mbedtls_ssl_conf_sig_hashes( &conf, ssl_sig_hashes_for_test_tls13 );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3_EXPERIMENTAL && MBEDTLS_ECP_C */
-
 #if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
     if( opt.cid_enabled == 1 || opt.cid_enabled_renego == 1 )
     {
