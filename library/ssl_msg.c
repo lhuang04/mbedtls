@@ -2835,7 +2835,7 @@ int mbedtls_ssl_write_record(mbedtls_ssl_context *ssl, uint8_t force_flush)
         /* Skip writing the record content type to after the encryption,
          * as it may change when using the CID extension. */
 
-        mbedtls_ssl_write_version(ssl->major_ver, ssl->minor_ver,
+        mbedtls_ssl_write_wire_version(ssl->major_ver, ssl->minor_ver,
                                   ssl->conf->transport, ssl->out_hdr + 1);
 
         memcpy(ssl->out_ctr, ssl->cur_out_ctr, 8);
