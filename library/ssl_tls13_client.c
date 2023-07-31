@@ -1267,6 +1267,19 @@ static int ssl_write_key_shares_ext( mbedtls_ssl_context *ssl,
     info = mbedtls_ecp_curve_info_from_grp_id( *grp_id );
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", info->name ) );
 
+    mbedtls_ecp_group_id ecdh_ctx_grp_id;
+#if defined(MBEDTLS_ECDH_LEGACY_CONTEXT)
+    ecdh_ctx_grp_id = ssl->handshake->ecdh_ctx.grp.id;
+#else
+    ecdh_ctx_grp_id = ssl->handshake->ecdh_ctx.grp_id;
+#endif
+
+    if( ecdh_ctx_grp_id != MBEDTLS_ECP_DP_NONE )
+    {
+        mbedtls_ecdh_free( &ssl->handshake->ecdh_ctx);
+        mbedtls_ecdh_init( &ssl->handshake->ecdh_ctx);
+    }
+
     ret = mbedtls_ecp_group_load( &ssl->handshake->ecdh_ctx.grp, info->grp_id );
     if( ret != 0 )
     {
