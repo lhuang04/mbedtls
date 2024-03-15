@@ -149,13 +149,6 @@ int main( void )
 #define DFL_REPRODUCIBLE        0
 #define DFL_NSS_KEYLOG          0
 #define DFL_NSS_KEYLOG_FILE     NULL
-#define DFL_SIG_ALGS            NULL
-
-#define DFL_EARLY_DATA          MBEDTLS_SSL_EARLY_DATA_DISABLED
-#define MAX_NAMED_GROUPS        4
-#define DFL_TICKET_FLAGS        7 /* allow everything */
-#define DFL_TICKET_LIFETIME     MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME
-#define DFL_RETURN_ROUTABILITY  MBEDTLS_SSL_RETURN_ROUTABILITY_DISABLED
 #define DFL_QUERY_CONFIG_MODE   0
 #define DFL_USE_SRTP            0
 #define DFL_SRTP_FORCE_PROFILE  0
@@ -366,23 +359,13 @@ int main( void )
 #define USAGE_ALPN ""
 #endif /* MBEDTLS_SSL_ALPN */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#if defined(MBEDTLS_SSL_COOKIE_C)
-#define USAGE_COOKIES \
-    "    cookies=0/1/2/-1      default: 1\n"        \
-    "                        0: disabled, 1: enabled, 2: force return-routability check,  -1: library broken\n"
-#else
-#define USAGE_COOKIES ""
-#endif /* MBEDTLS_SSL_COOKIE_C */
-#else
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
 #define USAGE_COOKIES \
     "    cookies=0/1/-1      default: 1 (enabled)\n"        \
     "                        0: disabled, -1: library default (broken)\n"
 #else
 #define USAGE_COOKIES ""
-#endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif
 
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
 #define USAGE_ANTI_REPLAY \
@@ -441,24 +424,6 @@ int main( void )
 #define USAGE_ECJPAKE ""
 #endif
 
-#if defined(MBEDTLS_ZERO_RTT)
-#define USAGE_EARLY_DATA \
-    "    early_data=%%d        default: 0 (disabled)\n"             \
-    "                        options: 0     (disabled), "           \
-    "                                 -1    (enabled, unlimited), " \
-    "                                 n > 0 (enabled, max. number of bytes sent as 0-RTT = n)\n"
-#else
-#define USAGE_EARLY_DATA ""
-#endif /* MBEDTLS_ZERO_RTT */
-
-#if defined(MBEDTLS_ECP_C)
-#define USAGE_NAMED_GROUP \
-    "    named_groups=%%s    default: secp256r1, secp384r1\n"      \
-    "                        options: secp256r1, secp384r1, secp521r1, all\n"
-#else
-#define USAGE_NAMED_GROUP ""
-#endif
-
 #if defined(MBEDTLS_ECP_C)
 #define USAGE_CURVES \
     "    curves=a,b,c,d      default: \"default\" (library default)\n"  \
@@ -472,7 +437,7 @@ int main( void )
 
 #if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
 #define USAGE_SIG_ALGS \
-    "    sig_algs=a,b,c,d      default: \"default\" (library default: ecdsa_secp256r1_sha256)\n"  \
+    "    sig_algs=a,b,c,d      default: \"default\" (library default)\n"  \
     "                          example: \"ecdsa_secp256r1_sha256,ecdsa_secp384r1_sha384\"\n"
 #else
 #define USAGE_SIG_ALGS ""
@@ -569,8 +534,6 @@ int main( void )
     USAGE_ALPN                                              \
     USAGE_EMS                                               \
     USAGE_ETM                                               \
-    USAGE_EARLY_DATA                                        \
-    USAGE_NAMED_GROUP                                       \
     USAGE_CURVES                                            \
     USAGE_SIG_ALGS                                          \
     USAGE_KEY_OPAQUE_ALGS                                   \
@@ -603,7 +566,6 @@ int main( void )
 #define ALPN_LIST_SIZE    10
 #define CURVE_LIST_SIZE   20
 #define SIG_ALG_LIST_SIZE 5
-#define NAMED_GROUPS_LIST_SIZE 5
 
 #define PUT_UINT64_BE(out_be,in_le,i)                                   \
 {                                                                       \
@@ -679,9 +641,6 @@ struct options
     int dummy_ticket;           /* enable / disable dummy ticket generator  */
     int ticket_rotate;          /* session ticket rotate (code coverage)    */
     int ticket_timeout;         /* session ticket lifetime                  */
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    mbedtls_ssl_ticket_flags ticket_flags;   /* ticket flags                */
-#endif
     int ticket_aead;            /* session ticket protection                */
     int cache_max;              /* max number of session cache entries      */
 #if defined(MBEDTLS_HAVE_TIME)
@@ -716,9 +675,6 @@ struct options
     const char *cid_val_renego; /* the CID to use for incoming messages
                                  * after renegotiation                      */
     int reproducible;           /* make communication reproducible          */
-    int early_data;                   /* support for early data             */
-    int early_data_max;               /* maximum amount of early data       */
-    const char *named_groups_string;  /* list of named groups               */
     int query_config_mode;      /* whether to read config                   */
     int use_srtp;               /* Support SRTP                             */
     int force_srtp_profile;     /* SRTP protection profile to use or all    */
@@ -1065,28 +1021,6 @@ int psk_callback( void *p_info, mbedtls_ssl_context *ssl,
     return( -1 );
 }
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
-
-#if defined(MBEDTLS_ZERO_RTT)
-/*
-* Early data callback.
-*/
-int early_data_callback( mbedtls_ssl_context *ssl,
-                         const unsigned char *buffer, size_t len )
-{
-    // In this example we don't need access to the SSL structure
-    ((void) ssl);
-    char *buffer_to_print;
-    if( len > 0 && buffer != NULL )
-    {
-        buffer_to_print = mbedtls_calloc( 1, len + 1 );
-        memcpy( buffer_to_print, buffer, len );
-        buffer_to_print[len] = '\0';
-        mbedtls_printf( " %zu bytes early data received: %s\n", len, buffer_to_print );
-        mbedtls_free( buffer_to_print );
-    }
-    return( 0 );
-}
-#endif /* MBEDTLS_ZERO_RTT */
 
 static mbedtls_net_context listen_fd, client_fd;
 
@@ -1512,13 +1446,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_COOKIE_C)
     mbedtls_ssl_cookie_ctx cookie_ctx;
 #endif
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ECP_C)
-   /* list of named groups */
-    mbedtls_ecp_group_id named_groups_list[NAMED_GROUPS_LIST_SIZE];
-    /* list of signature algorithms */
-    char *start;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ECP_C */
-
 
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
@@ -1588,11 +1515,9 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_status_t status;
 #endif
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     unsigned char eap_tls_keymaterial[16];
     unsigned char eap_tls_iv[8];
     const char* eap_tls_label = "client EAP encryption";
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
     eap_tls_keys eap_tls_keying;
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     /*! master keys and master salt for SRTP generated during handshake */
@@ -1649,10 +1574,6 @@ int main( int argc, char *argv[] )
 #if defined(MBEDTLS_SSL_ALPN)
     memset( (void *) alpn_list, 0, sizeof( alpn_list ) );
 #endif
-#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    memset((void *)named_groups_list, MBEDTLS_ECP_DP_NONE, sizeof(named_groups_list));
-#endif
-
 #if defined(MBEDTLS_SSL_COOKIE_C)
     mbedtls_ssl_cookie_init( &cookie_ctx );
 #endif
@@ -1666,7 +1587,7 @@ int main( int argc, char *argv[] )
         ret = MBEDTLS_ERR_SSL_HW_ACCEL_FAILED;
         goto exit;
     }
-#endif  /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
+#endif  /* MBEDTLS_USE_PSA_CRYPTO */
 #if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG)
     mbedtls_test_enable_insecure_external_rng( );
 #endif  /* MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG */
@@ -1728,11 +1649,6 @@ int main( int argc, char *argv[] )
     opt.async_private_delay2 = DFL_ASYNC_PRIVATE_DELAY2;
     opt.async_private_error = DFL_ASYNC_PRIVATE_ERROR;
     opt.psk                 = DFL_PSK;
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
-    opt.ticket_flags        = DFL_TICKET_FLAGS;
-#endif /* MBEDTLS_SSL_SESSION_TICKETS */
-    opt.early_data          = DFL_EARLY_DATA;
-    opt.sig_algs            = DFL_SIG_ALGS;
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     opt.psk_opaque          = DFL_PSK_OPAQUE;
     opt.psk_list_opaque     = DFL_PSK_LIST_OPAQUE;
@@ -2003,29 +1919,6 @@ int main( int argc, char *argv[] )
                 goto usage;
         }
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#if defined(MBEDTLS_ZERO_RTT)
-        else if( strcmp( p, "early_data" ) == 0 )
-        {
-            int early_data_val = atoi( q );
-            switch( early_data_val )
-            {
-                case 0:
-                    opt.early_data = MBEDTLS_SSL_EARLY_DATA_DISABLED;
-                    break;
-                default:
-                    opt.early_data = MBEDTLS_SSL_EARLY_DATA_ENABLED;
-                    opt.early_data_max = (size_t) early_data_val;
-                    break;
-            }
-        }
-#endif /* MBEDTLS_ZERO_RTT */
-
-#if defined(MBEDTLS_ECP_C)
-        else if( strcmp( p, "named_groups" ) == 0 )
-            opt.named_groups_string = q;
-        else if( strcmp( p, "sig_algs" ) == 0 )
-            opt.sig_algs = q;
-#endif /* MBEDTLS_ECP_C */
         else if( strcmp( p, "tls13_kex_modes" ) == 0 )
         {
             if( strcmp( q, "psk" ) == 0 )
@@ -2060,8 +1953,7 @@ int main( int argc, char *argv[] )
                      strcmp( q, "dtls12" ) == 0 )
                 opt.min_version = MBEDTLS_SSL_VERSION_TLS1_2;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-            else if( strcmp( q, "tls13" ) == 0 ||
-                     strcmp( q, "dtls13" ) == 0 )
+            else if( strcmp( q, "tls13" ) == 0 )
                 opt.min_version = MBEDTLS_SSL_VERSION_TLS1_3;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
             else
@@ -2073,9 +1965,8 @@ int main( int argc, char *argv[] )
                      strcmp( q, "dtls12" ) == 0 )
                 opt.max_version = MBEDTLS_SSL_VERSION_TLS1_2;
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-            else if( strcmp( q, "tls13" ) == 0 ||
-                     strcmp( q, "dtls13" ) == 0 )
-                opt.min_version = MBEDTLS_SSL_VERSION_TLS1_3;
+            else if( strcmp( q, "tls13" ) == 0 )
+                opt.max_version = MBEDTLS_SSL_VERSION_TLS1_3;
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
             else
                 goto usage;
@@ -2107,12 +1998,6 @@ int main( int argc, char *argv[] )
             {
                 opt.min_version = MBEDTLS_SSL_VERSION_TLS1_3;
                 opt.max_version = MBEDTLS_SSL_VERSION_TLS1_3;
-            }
-            else if( strcmp( q, "dtls13" ) == 0 )
-            {
-                opt.min_version = MBEDTLS_SSL_VERSION_TLS1_3;
-                opt.max_version = MBEDTLS_SSL_VERSION_TLS1_3;
-                opt.transport = MBEDTLS_SSL_TRANSPORT_DATAGRAM;
             }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
             else
@@ -2206,16 +2091,6 @@ int main( int argc, char *argv[] )
             if( opt.ticket_timeout < 0 )
                 goto usage;
         }
-#if defined(MBEDTLS_SSL_SESSION_TICKETS)
-        else if( strcmp( p, "ticket_flags" ) == 0 )
-        {
-            mbedtls_ssl_ticket_flags temp = atoi( q );
-            if( ( temp & ( mbedtls_ssl_ticket_flags ) allow_early_data ) || ( temp & ( mbedtls_ssl_ticket_flags ) allow_dhe_resumption ) || ( temp & ( mbedtls_ssl_ticket_flags ) allow_psk_resumption ) )
-            {
-                opt.ticket_flags = temp & ( mbedtls_ssl_ticket_flags ) allow_early_data & ( mbedtls_ssl_ticket_flags ) allow_dhe_resumption & ( mbedtls_ssl_ticket_flags ) allow_psk_resumption;
-            } else goto usage;
-        }
-#endif
         else if( strcmp( p, "ticket_aead" ) == 0 )
         {
             const mbedtls_cipher_info_t *ci = mbedtls_cipher_info_from_string( q );
@@ -2241,13 +2116,8 @@ int main( int argc, char *argv[] )
         else if( strcmp( p, "cookies" ) == 0 )
         {
             opt.cookies = atoi( q );
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-            if( opt.cookies < -1 || opt.cookies > 2 )
+            if( opt.cookies < -1 || opt.cookies > 1)
                 goto usage;
-#else
-            if( opt.cookies < -1 || opt.cookies > 1 )
-                goto usage;
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
         }
         else if( strcmp( p, "anti_replay" ) == 0 )
         {
@@ -2680,12 +2550,6 @@ int main( int argc, char *argv[] )
 
         sig_alg_list[i] = MBEDTLS_TLS1_3_SIG_NONE;
     }
-    else
-    {
-        /* Configure default signature algorithm */
-        sig_alg_list[0] = MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256;
-        sig_alg_list[1] = MBEDTLS_TLS1_3_SIG_NONE;
-    }
 #endif
 
 #if defined(MBEDTLS_SSL_ALPN)
@@ -2707,54 +2571,6 @@ int main( int argc, char *argv[] )
         }
     }
 #endif /* MBEDTLS_SSL_ALPN */
-
-    #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_ECP_C)
-    if( opt.named_groups_string != NULL )
-    {
-        p = (char *)opt.named_groups_string;
-        i = 0;
-        start = p;
-        /* Leave room for a final NULL in named_groups_list */
-        while( i < NAMED_GROUPS_LIST_SIZE - 1 && *p != '\0' )
-        {
-            q = p;
-
-            /* Terminate the current string */
-            while( *p != ',' && *p != '\0' )
-                p++;
-
-            if( *p == ',' )
-                *p++ = '\0';
-
-            if( *p == ',' || *p == '\0' )
-            {
-
-                if( *p == ',' )
-                    *p++ = '\0';
-
-                if( strcmp( start, "secp256r1" ) == 0 )
-                    named_groups_list[i++] = MBEDTLS_ECP_DP_SECP256R1;
-                else if( strcmp( start, "secp384r1" ) == 0 )
-                    named_groups_list[i++] = MBEDTLS_ECP_DP_SECP384R1;
-                else if( strcmp( start, "secp521r1" ) == 0 )
-                    named_groups_list[i++] = MBEDTLS_ECP_DP_SECP521R1;
-                else if( strcmp( start, "all" ) == 0 )
-                {
-                    named_groups_list[i++] = MBEDTLS_ECP_DP_SECP256R1;
-                    named_groups_list[i++] = MBEDTLS_ECP_DP_SECP384R1;
-                    named_groups_list[i++] = MBEDTLS_ECP_DP_SECP521R1;
-                    break;
-                }
-                else goto usage;
-                start = p;
-            }
-            else goto usage;
-        }
-
-        if( i == 0 ) goto usage;
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_ECP_C */
-
 
     /*
      * 0. Initialize the RNG and the session data
@@ -3045,12 +2861,6 @@ int main( int argc, char *argv[] )
     if( opt.cert_req_ca_list != DFL_CERT_REQ_CA_LIST )
         mbedtls_ssl_conf_cert_req_ca_list( &conf, opt.cert_req_ca_list );
 
-#if defined(MBEDTLS_ZERO_RTT)
-    mbedtls_ssl_conf_early_data( &conf, opt.early_data,
-                                 opt.early_data_max,
-                                 early_data_callback );
-#endif /* MBEDTLS_ZERO_RTT */
-
 #if defined(MBEDTLS_KEY_EXCHANGE_CERT_REQ_ALLOWED_ENABLED)
     /* exercise setting DN hints for server certificate request
      * (Intended for use where the client cert expected has been signed by
@@ -3153,11 +2963,6 @@ int main( int argc, char *argv[] )
         }
 #endif
 
-#if defined(MBEDTLS_ECP_C) && defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    if( named_groups_list[0] != MBEDTLS_ECP_DP_NONE )
-        mbedtls_ssl_conf_curves( &conf, named_groups_list );
-#endif
-
     if (opt.reproducible)
     {
 #if defined(MBEDTLS_HAVE_TIME)
@@ -3238,39 +3043,6 @@ int main( int argc, char *argv[] )
     }
 #endif
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#if defined(MBEDTLS_SSL_COOKIE_C)
-    if( opt.cookies > 0 )
-    {
-        if( ( ret = mbedtls_ssl_cookie_setup( &cookie_ctx,
-                                              rng_get, &rng ) ) != 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_cookie_setup returned %d\n\n", ret );
-            goto exit;
-        }
-
-        if( opt.cookies == 1 )
-        {
-            mbedtls_ssl_conf_cookies( &conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
-                                      &cookie_ctx, MBEDTLS_SSL_FORCE_RR_CHECK_OFF );
-        }
-
-        if( opt.cookies == 2 )
-        {
-            mbedtls_ssl_conf_cookies( &conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
-                                      &cookie_ctx, MBEDTLS_SSL_FORCE_RR_CHECK_ON );
-        }
-    }
-    else if( opt.cookies == 0 ) // cookie support disabled
-    {
-        mbedtls_ssl_conf_cookies( &conf, NULL, NULL, NULL, MBEDTLS_SSL_FORCE_RR_CHECK_OFF );
-    }
-    else
-#endif /* MBEDTLS_SSL_COOKIE_C */
-    {
-        ; /* Nothing to do */
-    }
-#else
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( opt.transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
@@ -3283,10 +3055,9 @@ int main( int argc, char *argv[] )
                 mbedtls_printf( " failed\n  ! mbedtls_ssl_cookie_setup returned %d\n\n", ret );
                 goto exit;
             }
-#if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
+
             mbedtls_ssl_conf_dtls_cookies( &conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check,
                                        &cookie_ctx );
-#endif /* defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) */
         }
         else
 #endif /* MBEDTLS_SSL_COOKIE_C */
@@ -3300,13 +3071,7 @@ int main( int argc, char *argv[] )
         {
             ; /* Nothing to do */
         }
-    }
-#endif /* MBEDTLS_SSL_PROTO_DTLS */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
-#if defined(MBEDTLS_SSL_PROTO_DTLS)
-    if( opt.transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
-    {
 #if defined(MBEDTLS_SSL_DTLS_ANTI_REPLAY)
         if( opt.anti_replay != DFL_ANTI_REPLAY )
             mbedtls_ssl_conf_dtls_anti_replay( &conf, opt.anti_replay );
@@ -3458,18 +3223,12 @@ int main( int argc, char *argv[] )
 #endif
 
 #if defined(MBEDTLS_ECP_C)
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-    /* Configure default name groups */
-    if (named_groups_list[0] != MBEDTLS_ECP_DP_NONE)
-        mbedtls_ssl_conf_curves( &conf, named_groups_list );
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
-    /* Configure default curves */
     if( opt.curves != NULL &&
         strcmp( opt.curves, "default" ) != 0 )
     {
         mbedtls_ssl_conf_groups( &conf, group_list );
     }
-#endif /* MBEDTLS_ECP_C */
+#endif
 
 #if defined(MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED)
     if( opt.sig_algs != NULL )
@@ -3701,17 +3460,6 @@ reset:
 
     mbedtls_ssl_conf_read_timeout( &conf, opt.read_timeout );
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
-#if defined(MBEDTLS_SSL_COOKIE_C)
-    if( ( ret = mbedtls_ssl_set_client_transport_id( &ssl,
-                        client_ip, cliip_len ) ) != 0 )
-        {
-            mbedtls_printf( " failed\n  ! mbedtls_ssl_set_client_transport_id() returned -0x%x\n\n",
-                            (unsigned int) -ret );
-            goto exit;
-        }
-#endif /* MBEDTLS_SSL_COOKIE_C */
-#else /* MBEDTLS_SSL_PROTO_TLS1_3 */
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
     if( opt.transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
     {
@@ -3724,7 +3472,6 @@ reset:
         }
     }
 #endif /* MBEDTLS_SSL_DTLS_HELLO_VERIFY */
-#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     if( opt.ecjpake_pw != DFL_ECJPAKE_PW )
@@ -3883,18 +3630,9 @@ handshake:
 #endif /* MBEDTLS_X509_REMOVE_INFO */
 #endif /* MBEDTLS_SSL_HANDSHAKE_WITH_CERT_ENABLED */
 
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if( opt.eap_tls != 0 )
     {
         size_t j = 0;
-
-        if( mbedtls_ssl_get_version_number( &ssl ) !=
-            MBEDTLS_SSL_VERSION_TLS1_2 )
-        {
-            mbedtls_printf( "Error: eap_tls is only supported for TLS 1.2.\n" );
-            ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
-            goto exit;
-        }
 
         if( ( ret = mbedtls_ssl_tls_prf( eap_tls_keying.tls_prf_type,
                                          eap_tls_keying.master_secret,
@@ -3941,7 +3679,6 @@ handshake:
         }
         mbedtls_printf("\n");
     }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined( MBEDTLS_SSL_DTLS_SRTP )
     else if( opt.use_srtp != 0  )
@@ -4172,8 +3909,8 @@ data_exchange:
              */
 
             /* For event-driven IO, wait for socket to become available */
-            if( opt.event == 1 /* level triggered IO */ &&
-                mbedtls_ssl_check_pending( &ssl ) == 0 )
+            if( mbedtls_ssl_check_pending( &ssl ) == 0 &&
+                opt.event == 1 /* level triggered IO */ )
             {
 #if defined(MBEDTLS_TIMING_C)
                 idle( &client_fd, &timer, MBEDTLS_ERR_SSL_WANT_READ );
@@ -4309,17 +4046,6 @@ data_exchange:
                     idle( &client_fd, ret );
 #endif
                 }
-            }
-        }
-
-        while( ( ret = mbedtls_ssl_flush_output( &ssl ) ) != 0 )
-        {
-            if( ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                ret != MBEDTLS_ERR_SSL_WANT_WRITE )
-            {
-                mbedtls_printf( " failed\n  ! mbedtls_ssl_flush_output returned -0x%x\n\n",
-                                (unsigned int) -ret );
-                goto exit;
             }
         }
     }
