@@ -154,6 +154,10 @@ OBJS_CRYPTO= \
 	     timing.o \
 	     version.o \
 	     version_features.o \
+	     ssl_tls13_client.o \
+	     ssl_tls13_generic.o \
+	     ssl_tls13_server.o \
+	     ssl_tls13_keys.o \
 	     # This line is intentionally left blank
 
 include ../3rdparty/Makefile.inc
@@ -186,7 +190,15 @@ OBJS_TLS= \
 	  ssl_tls13_client.o \
 	  ssl_tls13_server.o \
 	  ssl_tls13_generic.o \
-	  # This line is intentionally left blank
+	  mps_reader.o \
+	  mps_writer.o \
+	  mps_layer1.o \
+	  mps_layer2.o \
+	  mps_layer3.o \
+	  mps.o \
+	  mps_allocator.o \
+          mps_transform.o \
+          # This line is intentionally left blank
 
 .SILENT:
 

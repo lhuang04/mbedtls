@@ -1,6 +1,8 @@
 DESTDIR=/usr/local
 PREFIX=mbedtls_
 PERL ?= perl
+MBEDTLS_SSL_PROTO_TLS1_3=y
+export MBEDTLS_SSL_PROTO_TLS1_3
 
 .SILENT:
 
@@ -167,7 +169,9 @@ C_SOURCE_FILES = $(wildcard \
 	3rdparty/*/include/*/*.h 3rdparty/*/include/*/*/*.h 3rdparty/*/include/*/*/*/*.h \
 	3rdparty/*/*.c 3rdparty/*/*/*.c 3rdparty/*/*/*/*.c 3rdparty/*/*/*/*/*.c \
 	include/*/*.h \
+	include/*/*/*.h \
 	library/*.[hc] \
+	library/*/*.[hc] \
 	programs/*/*.[hc] \
 	tests/include/*/*.h tests/include/*/*/*.h \
 	tests/src/*.c tests/src/*/*.c \

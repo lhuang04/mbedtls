@@ -1,71 +1,82 @@
-README for Mbed TLS
-===================
+Mbed TLS - Experimental branch
+==============================
 
-Mbed TLS is a C library that implements cryptographic primitives, X.509 certificate manipulation and the SSL/TLS and DTLS protocols. Its small code footprint makes it suitable for embedded systems.
+# Introduction
 
-Mbed TLS includes a reference implementation of the [PSA Cryptography API](#psa-cryptography-api). This is currently a preview for evaluation purposes only.
+This is the experimental branch of [Mbed TLS](https://github.com/armmbed/mbedtls). For more information on Mbed TLS in
+general, please see the corresponding
+[README.md](https://github.com/armmbed/mbedtls/tree/development/README.md). This readme focuses on the specifics of the experimental branch.
 
-Configuration
--------------
+This branch hosts the development of experimental and exploratory features of Mbed TLS. Most of the
+development happening here is intended to be upstreamed to main Mbed TLS, but might not yet have reached
+the necessary level of code quality and/or testing and/or documentation.
 
-Mbed TLS should build out of the box on most systems. Some platform specific options are available in the fully documented configuration file `include/mbedtls/mbedtls_config.h`, which is also the place where features can be selected. This file can be edited manually, or in a more programmatic way using the Python 3 script `scripts/config.py` (use `--help` for usage instructions).
+## Feedback and Contribution
 
-Compiler options can be set using conventional environment variables such as `CC` and `CFLAGS` when using the Make and CMake build system (see below).
+If you are interested in trying out or contributing to the features that are being developed here, please reach out! We
+welcome any feedback and support, and it will accelerate the process of getting the features in a production ready state
+suitable for upstreaming to Mbed TLS' `development` branch.
 
-We provide some non-standard configurations focused on specific use cases in the `configs/` directory. You can read more about those in `configs/README.txt`
+If you want to share any feedback, just open an issue. If you've made an improvement, open a PR. And if you
+have questions of any kind, drop us a line - the main points of contacts are [@hanno-arm](https://github.com/hanno-arm)
+and [@hannestschofenig](https://github.com/hannestschofenig).
 
-Documentation
--------------
+# Experimental Features
 
+In the following, we describe the features that are currently under development.
 The main Mbed TLS documentation is available via [ReadTheDocs](https://mbed-tls.readthedocs.io/).
 
 Documentation for the PSA Cryptography API is available [on GitHub](https://arm-software.github.io/psa-api/crypto/).
 
-To generate a local copy of the library documentation in HTML format, tailored to your compile-time configuration:
+## TLS 1.3
 
-1. Make sure that [Doxygen](http://www.doxygen.nl/) is installed.
-1. Run `make apidoc`.
-1. Browse `apidoc/index.html` or `apidoc/modules.html`.
+The experimental branch contains a prototype implementation of TLS 1.3. Supported features include PSK and ECDHE-based
+key exchanges, 0-RTT and session tickets. The TLS 1.3 prototype is actively being worked on, see
+[issues](https://github.com/hannestschofenig/mbedtls/issues) and [pull
+requests](https://github.com/hannestschofenig/mbedtls/pulls), and major parts of it, such as the entire TLS 1.3 key
+schedule, have already been upstreamed to the `development` branch of Mbed TLS. We aim to have completed the upstreaming
+of client-only, ECDHE-only TLS 1.3 support to upstream Mbed TLS by the end of September 2021.
 
-For other sources of documentation, see the [SUPPORT](SUPPORT.md) document.
+TLS 1.3 support is enabled by default. Please try it out and let us know if you have any issues. As mentioned, it will
+accelerate the upstreaming process.
 
-Compiling
----------
+## Towards DTLS 1.3, QUIC, cTLS, and Post-Quantum Cryptography: A new Message Processing Stack (MPS)
 
-There are currently three active build systems used within Mbed TLS releases:
+A growing number of TLS-variants are currently in development, such as DTLS 1.3, QUIC, cTLS, or KemTLS. Some of those
+variants maintain the handshake logic of TLS but change lower level details (e.g. QUIC, cTLS, DTLS 1.3), while others
+keep the lower layers and change the handshake logic (e.g. KemTLS).
 
--   GNU Make
--   CMake
--   Microsoft Visual Studio
+In order to eventually support the large number of TLS-variants with a minimal code base with maximal code sharing, we
+have developed a complete rewrite of Mbed TLS' messaging layer, called _Message Processing Stack_ (MPS). MPS provides a
+multiple abstraction boundariies between low-level messaging details of TLS, and the higher level handshake logic. Variants
+like cTLS, DTLS 1.3, QUIC, only need to re-implement the MPS abstraction boundary, but keep the handshake logic intact,
+while variants like KemTLS can keep the MPS implementation but build a different handshake layer on top.
 
-The main systems used for development are CMake and GNU Make. Those systems are always complete and up-to-date. The others should reflect all changes present in the CMake and Make build system, although features may not be ported there automatically.
+MPS also aims to support future development around _Post Quantum Cryptography_: Specifically, it offers a _streaming
+interface_ to the handshake layer, whereby handshake messages can be processed gradually as they arrive, without prior reassembly in
+RAM. This allows some memory hungry Post-Quantum schemes to be implemented with small amounts of RAM.
 
-The Make and CMake build systems create three libraries: libmbedcrypto, libmbedx509, and libmbedtls. Note that libmbedtls depends on libmbedx509 and libmbedcrypto, and libmbedx509 depends on libmbedcrypto. As a result, some linkers will expect flags to be in a specific order, for example the GNU linker wants `-lmbedtls -lmbedx509 -lmbedcrypto`.
+Links: [MPS API](https://github.com/hannestschofenig/mbedtls/tree/tls13-prototype/include/mbedtls/mps), [MPS
+Implementation](https://github.com/hannestschofenig/mbedtls/tree/tls13-prototype/library/mps).
 
-### Tool versions
+MPS is controlled by the configuration option `MBEDTLS_SSL_USE_MPS`, which is enabled by default.
 
-You need the following tools to build the library with the provided makefiles:
+## Post-Quantum Cryptography
 
-* GNU Make 3.82 or a build tool that CMake supports.
-* A C99 toolchain (compiler, linker, archiver). We actively test with GCC 5.4, Clang 3.8, IAR 8 and Visual Studio 2013. More recent versions should work. Slightly older versions may work.
-* Python 3.6 to generate the test code, and to generate sample programs in the development branch.
-* Perl to run the tests, and to generate some source files in the development branch.
-* CMake 3.10.2 or later (if using CMake).
-* Microsoft Visual Studio 2013 or later (if using Visual Studio).
-* Doxygen 1.8.11 or later (if building the documentation; slightly older versions should work).
+We're in the early stages of experimenting with PQC support in Mbed TLS on the basis of the [libOQS](https://openquantumsafe.org/liboqs/) post-quantum
+cryptography library.  To enable libOQS, you have to set `MBEDTLS_LIBOQS_ENABLE` in `include/mbedtls/mbedtls_config.h`
+and build Mbed TLS via `cmake`. Any change in `MBEDTLS_LIBOQS_ENABLE` currently demands a re-build of the `cmake`
+makefiles. You can check that the build was successful by checking for and running the libOQS unit test `./tests/test_suite_liboqs`.
 
-### Generated source files in the development branch
+The actual integration PQC KEMs and their hybrids into Mbed TLS is still ongoing. Please reach out to [@brett-warren-arm](https://github.com/brett-warren-arm)
+or [@hanno-arm](https://github.com/hanno-arm), or open an issue, if have questions or would like to contribute.
 
-The source code of Mbed TLS includes some files that are automatically generated by scripts and whose content depends only on the Mbed TLS source, not on the platform or on the library configuration. These files are not included in the development branch of Mbed TLS, but the generated files are included in official releases. This section explains how to generate the missing files in the development branch.
+# Known limitations
 
-The following tools are required:
+Please consult the [issues](https://github.com/hannestschofenig/mbedtls/issues) for a complete list of issues. Here we
+focus on the main limitations.
 
-* Perl, for some library source files and for Visual Studio build files.
-* Python 3 and some Python packages, for some library source files, sample programs and test data. To install the necessary packages, run
-    ```
-    python -m pip install -r scripts/basic.requirements.txt
-    ```
-* A C compiler for the host platform, for some test data.
+## Dual TLS 1.2 - TLS 1.3 build
 
 If you are cross-compiling, you must set the `CC` environment variable to a C compiler for the host platform when generating the configuration-independent files.
 

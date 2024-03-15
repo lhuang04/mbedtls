@@ -56,7 +56,7 @@ extern "C" {
 /**
  * \brief   Information for session ticket protection
  */
-typedef struct mbedtls_ssl_ticket_key
+typedef struct
 {
     unsigned char MBEDTLS_PRIVATE(name)[MBEDTLS_SSL_TICKET_KEY_NAME_BYTES];
                                                      /*!< random key identifier              */
@@ -77,12 +77,15 @@ mbedtls_ssl_ticket_key;
 /**
  * \brief   Context for session ticket handling functions
  */
-typedef struct mbedtls_ssl_ticket_context
+typedef struct
 {
     mbedtls_ssl_ticket_key MBEDTLS_PRIVATE(keys)[2]; /*!< ticket protection keys             */
     unsigned char MBEDTLS_PRIVATE(active);           /*!< index of the currently active key  */
 
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);       /*!< lifetime of tickets in seconds     */
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_ssl_ticket_flags MBEDTLS_PRIVATE(flags); /*!< ticket flags                       */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3  */
 
     /** Callback for getting (pseudo-)random numbers                        */
     int  (*MBEDTLS_PRIVATE(f_rng))(void *, unsigned char *, size_t);
@@ -125,10 +128,10 @@ void mbedtls_ssl_ticket_init( mbedtls_ssl_ticket_context *ctx );
  * \return          0 if successful,
  *                  or a specific MBEDTLS_ERR_XXX error code
  */
-int mbedtls_ssl_ticket_setup( mbedtls_ssl_ticket_context *ctx,
-    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
+int mbedtls_ssl_ticket_setup(mbedtls_ssl_ticket_context* ctx,
+    int (*f_rng)(void*, unsigned char*, size_t), void* p_rng,
     mbedtls_cipher_type_t cipher,
-    uint32_t lifetime );
+    uint32_t lifetime);
 
 /**
  * \brief           Rotate session ticket encryption key to new specified key.

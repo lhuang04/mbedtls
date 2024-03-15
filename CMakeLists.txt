@@ -53,6 +53,7 @@ endif()
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(ENABLE_PROGRAMS "Build mbed TLS programs." ON)
+option(MBEDTLS_SSL_PROTO_TLS1_3 "Building TLS 1.3 stack." ON)
 
 option(UNSAFE_BUILD "Allow unsafe builds. These builds ARE NOT SECURE." OFF)
 option(MBEDTLS_FATAL_WARNINGS "Compiler warnings treated as errors" ON)
@@ -187,7 +188,9 @@ if(CMAKE_COMPILER_IS_GNU)
     endif()
     if (GCC_VERSION VERSION_GREATER 4.5 OR GCC_VERSION VERSION_EQUAL 4.5)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wlogical-op")
-    endif()
+      endif()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format")
+
     if (GCC_VERSION VERSION_GREATER 4.8 OR GCC_VERSION VERSION_EQUAL 4.8)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wshadow")
     endif()

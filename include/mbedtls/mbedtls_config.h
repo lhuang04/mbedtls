@@ -1318,6 +1318,13 @@
 #define MBEDTLS_SSL_ALL_ALERT_MESSAGES
 
 /**
+ * \def MBEDTLS_SSL_USE_MPS
+ *
+ * TODO: Document
+ */
+//#define MBEDTLS_SSL_USE_MPS
+
+/**
  * \def MBEDTLS_SSL_DTLS_CONNECTION_ID
  *
  * Enable support for the DTLS Connection ID extension
@@ -1551,6 +1558,23 @@
  *
  */
 //#define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+
+/**
+*  \def MBEDTLS_SSL_EARLY_DATA_MAX_DELAY
+*
+* Tolerance window for ticket age value.
+* Outside this tolerance window, 0-RTT mode will be disabled.
+*
+*/
+#define MBEDTLS_SSL_EARLY_DATA_MAX_DELAY 10000
+
+/**
+* \def MBEDTLS_ZERO_RTT
+*
+* Allows to add functionality for TLS/DTLS 1.3 Zero-RTT.
+*
+*/
+//#define MBEDTLS_ZERO_RTT
 
 /**
  * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
@@ -3657,7 +3681,10 @@
  */
 //#define MBEDTLS_SSL_DTLS_MAX_BUFFERING             32768
 
-//#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
+/* TODO: This deviates from the default in TLS 1.2 -- it's 48 Bytes here because
+ *       TLS 1.3 PSKs obtained via SHA-384 have that length. */
+#define MBEDTLS_PSK_MAX_LEN               48
+
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
 
 /** \def MBEDTLS_TLS_EXT_CID
@@ -3736,5 +3763,13 @@
  * MBEDTLS_ECDH_LEGACY_CONTEXT in include/mbedtls/ecdh.h.
  */
 //#define MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED
+
+/**
+ * Enable the libOQS Post-Quantum Cryptography library
+ *
+ * If this is enabled, libOQS will be built in 3rdparty/liboqs
+ * and made available to Mbed TLS compilation units.
+ */
+//#define MBEDTLS_LIBOQS_ENABLE
 
 /** \} name SECTION: Module configuration options */

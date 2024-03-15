@@ -129,6 +129,8 @@ DATA_FILES := $(wildcard suites/test_suite_*.data)
 DATA_FILES += $(filter-out $(DATA_FILES),$(GENERATED_FILES))
 APPS = $(basename $(subst suites/,,$(DATA_FILES)))
 
+# remove test_suite_ssl build from TLS1.3 tests
+
 # Construct executable name by adding OS specific suffix $(EXEXT).
 BINARIES := $(addsuffix $(EXEXT),$(APPS))
 

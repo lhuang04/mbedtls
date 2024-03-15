@@ -125,6 +125,15 @@
 #define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED
 #endif
 
+/* Quick fix for prototype
+ */
+
+#if defined(MBEDTLS_ZERO_RTT) && !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+#undef MBEDTLS_ZERO_RTT
+#undef MBEDTLS_SSL_EARLY_DATA
+#endif
+/* Quick fix END */
+
 /* Make sure all configuration symbols are set before including check_config.h,
  * even the ones that are calculated programmatically. */
 #if defined(MBEDTLS_PSA_CRYPTO_CONFIG) /* PSA_WANT_xxx influences MBEDTLS_xxx */ || \
