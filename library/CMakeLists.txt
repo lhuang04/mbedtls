@@ -113,18 +113,10 @@ set(src_tls
     ssl_tls.c
     ssl_tls12_client.c
     ssl_tls12_server.c
-    ssl_tls13_client.c
-    ssl_tls13_generic.c
     ssl_tls13_keys.c
     ssl_tls13_server.c
-    mps_allocator.c
-    mps_layer1.c
-    mps_layer2.c
-    mps_layer3.c
-    mps.c
-    mps_reader.c
-    mps_writer.c
-    mps_transform.c
+    ssl_tls13_client.c
+    ssl_tls13_generic.c
 )
 
 if(GEN_FILES)
@@ -277,11 +269,6 @@ if(USE_STATIC_MBEDTLS_LIBRARY)
         target_link_libraries(${mbedcrypto_static_target} PUBLIC everest)
     endif()
 
-    if(TARGET liboqs)
-        add_dependencies(${mbedcrypto_target} liboqs)
-	target_link_libraries(${mbedcrypto_target} PUBLIC ${CMAKE_BINARY_DIR}/lib/liboqs.a)
-    endif()
-
     add_library(${mbedx509_static_target} STATIC ${src_x509})
     set_target_properties(${mbedx509_static_target} PROPERTIES OUTPUT_NAME mbedx509)
     target_link_libraries(${mbedx509_static_target} PUBLIC ${libs} ${mbedcrypto_static_target})
@@ -299,11 +286,6 @@ if(USE_SHARED_MBEDTLS_LIBRARY)
 
     if(TARGET everest)
         target_link_libraries(${mbedcrypto_target} PUBLIC everest)
-    endif()
-
-    if(TARGET liboqs)
-        add_dependencies(${mbedcrypto_target} liboqs)
-	target_link_libraries(${mbedcrypto_target} PUBLIC ${CMAKE_BINARY_DIR}/lib/liboqs.a)
     endif()
 
     add_library(${mbedx509_target} SHARED ${src_x509})
