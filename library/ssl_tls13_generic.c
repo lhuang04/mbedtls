@@ -1726,6 +1726,7 @@ int mbedtls_ssl_tls13_write_early_data_ext( mbedtls_ssl_context *ssl,
     MBEDTLS_PUT_UINT16_BE( 0, p, 2 );
 
     *out_len = 4;
+    mbedtls_ssl_tls13_set_hs_sent_ext_mask( ssl, MBEDTLS_TLS_EXT_EARLY_DATA );
     return( 0 );
 }
 #endif /* MBEDTLS_ZERO_RTT */
