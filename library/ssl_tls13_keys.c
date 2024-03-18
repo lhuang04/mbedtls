@@ -35,6 +35,10 @@
 
 #include "psa/crypto.h"
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+#include "mps_all.h"
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 #define MBEDTLS_SSL_TLS1_3_LABEL( name, string )       \
     .name = string,
 
@@ -783,6 +787,21 @@ exit:
     return( ret );
 }
 
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
+/* mbedtls_ssl_tls13_create_psk_binder():
+ *
+ *                0
+ *                |
+ *                v
+ *   PSK ->  HKDF-Extract = Early Secret
+ *                |
+ *                +------> Derive-Secret( .,
+ *                |                      "ext binder" |
+ *                |                      "res binder",
+ *                |                      "" )
+ *                |                     = binder_key
+ *                ...
+ */
 int mbedtls_ssl_tls13_create_psk_binder( mbedtls_ssl_context *ssl,
                                const psa_algorithm_t hash_alg,
                                unsigned char const *psk, size_t psk_len,
@@ -873,6 +892,7 @@ exit:
     mbedtls_platform_zeroize( binder_key,   sizeof( binder_key ) );
     return( ret );
 }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
 
 int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
                                           int endpoint,
@@ -1067,8 +1087,13 @@ int mbedtls_ssl_tls13_key_schedule_stage_early( mbedtls_ssl_context *ssl )
     }
 
     hash_alg = mbedtls_hash_info_psa_from_md( handshake->ciphersuite_info->mac );
+
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
-    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
+    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl )             ||
+#if defined(MBEDTLS_ZERO_RTT)
+        ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON ||
+#endif
+        0 )
     {
         ret = mbedtls_ssl_tls13_export_handshake_psk( ssl, &psk, &psk_len );
         if( ret != 0 )
@@ -1313,7 +1338,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED */
 
     /*
-     * Compute the Handshake Secret
+     * Compute the Handshake secret
      */
     ret = mbedtls_ssl_tls13_evolve_secret( hash_alg,
                                            handshake->tls13_master_secrets.early,
@@ -1467,6 +1492,89 @@ int mbedtls_ssl_tls13_generate_application_keys(
     return( ret );
 }
 
+#if defined(MBEDTLS_ZERO_RTT)
+/* Early Data Key Derivation for TLS 1.3 */
+int mbedtls_ssl_tls13_generate_early_data_keys(
+    mbedtls_ssl_context *ssl,
+    mbedtls_ssl_key_set *traffic_keys )
+{
+    int ret = 0;
+
+    mbedtls_md_type_t md_type;
+    mbedtls_md_info_t const *md_info;
+    size_t md_size;
+
+    unsigned char transcript[MBEDTLS_MD_MAX_SIZE];
+    size_t transcript_len;
+
+    mbedtls_cipher_info_t const *cipher_info;
+    size_t key_len, iv_len;
+
+    MBEDTLS_SSL_DEBUG_MSG( 2,
+         ( "=> mbedtls_ssl_tls13_generate_early_data_keys" ) );
+
+    cipher_info = mbedtls_cipher_info_from_type(
+                                  ssl->handshake->ciphersuite_info->cipher );
+    key_len = cipher_info->key_bitlen / 8;
+    iv_len = cipher_info->iv_size;
+
+    md_type = ssl->handshake->ciphersuite_info->mac;
+    md_info = mbedtls_md_info_from_type( md_type );
+    md_size = mbedtls_md_get_size( md_info );
+
+    ret = mbedtls_ssl_get_handshake_transcript( ssl, md_type,
+                                                transcript, sizeof( transcript ),
+                                                &transcript_len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_get_handshake_transcript", ret );
+        return( ret );
+    }
+
+    ret = mbedtls_ssl_tls13_derive_early_secrets(
+              mbedtls_psa_translate_md( md_type ),
+              ssl->handshake->tls13_master_secrets.early,
+              transcript, transcript_len,
+              &ssl->handshake->early_secrets );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_derive_early_secrets", ret );
+        return( ret );
+    }
+
+    MBEDTLS_SSL_DEBUG_BUF( 4, "client_early_traffic_secret",
+                ssl->handshake->early_secrets.client_early_traffic_secret,
+                md_size );
+
+#if defined(MBEDTLS_SSL_EXPORT_KEYS)
+    if( ssl->f_export_keys != NULL )
+    {
+        ssl->f_export_keys( ssl->p_export_keys,
+                MBEDTLS_SSL_KEY_EXPORT_TLS1_3_CLIENT_EARLY_SECRET,
+                ssl->handshake->early_secrets.client_early_traffic_secret,
+                md_size,
+                ssl->handshake->randbytes,
+                ssl->handshake->randbytes + MBEDTLS_CLIENT_HELLO_RANDOM_LEN,
+                MBEDTLS_SSL_TLS_PRF_NONE /* TODO: FIX! */ );
+    }
+#endif /* MBEDTLS_SSL_EXPORT_KEYS */
+
+    ret = mbedtls_ssl_tls13_make_traffic_keys(
+                      mbedtls_psa_translate_md( md_type ),
+                      ssl->handshake->early_secrets.client_early_traffic_secret,
+                      ssl->handshake->early_secrets.client_early_traffic_secret,
+                      md_size, key_len, iv_len, traffic_keys );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_tls13_make_traffic_keys", ret );
+        return( ret );
+    }
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= mbedtls_ssl_tls13_generate_early_data_keys" ) );
+    return( ret );
+}
+#endif /* MBEDTLS_ZERO_RTT */
+
 int mbedtls_ssl_tls13_compute_handshake_transform( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -1602,7 +1710,15 @@ int mbedtls_ssl_tls13_compute_application_transform( mbedtls_ssl_context *ssl )
         goto cleanup;
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     ssl->transform_application = transform_application;
+#else /* MBEDTLS_SSL_USE_MPS */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_application,
+                                        &ssl->epoch_application );
+    if( ret != 0 )
+        goto cleanup;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 cleanup:
 

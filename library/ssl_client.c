@@ -312,6 +312,45 @@ static int ssl_write_supported_groups_ext( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_ECDH_C || MBEDTLS_ECDSA_C ||
           MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED */
 
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+/*
+ * ssl_tls13_write_max_fragment_length_ext():
+ *
+ * enum{
+ *    2^9( 1 ), 2^10( 2 ), 2^11( 3 ), 2^12( 4 ), ( 255 )
+ * } MaxFragmentLength;
+ *
+ */
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_write_max_fragment_length_ext( mbedtls_ssl_context *ssl,
+                                              unsigned char *buf,
+                                              const unsigned char *end,
+                                              size_t *out_len )
+{
+    unsigned char *p = buf;
+
+    *out_len = 0;
+
+    if( ssl->conf->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE )
+        return( 0 );
+
+    MBEDTLS_SSL_CHK_BUF_PTR( p, end, 5 );
+
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, adding max_fragment_length extension" ) );
+
+    MBEDTLS_PUT_UINT16_BE( MBEDTLS_TLS_EXT_MAX_FRAGMENT_LENGTH, p, 0 );
+    MBEDTLS_PUT_UINT16_BE( 1, p, 2 );
+    p += 4;
+
+    *p++ = ssl->conf->mfl_code;
+    MBEDTLS_SSL_DEBUG_MSG( 3, ( "Maximum fragment length = %d", ssl->conf->mfl_code ) );
+
+    *out_len = 5;
+
+    return( 0 );
+}
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
+
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_write_client_hello_cipher_suites(
             mbedtls_ssl_context *ssl,
@@ -586,6 +625,16 @@ static int ssl_write_client_hello_body( mbedtls_ssl_context *ssl,
         return( ret );
     p += output_len;
 #endif /* MBEDTLS_SSL_ALPN */
+
+#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
+    ret = ssl_write_max_fragment_length_ext( ssl, p, end, &output_len );
+    if( ret != 0 )
+    {
+        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_max_fragment_length_ext", ret );
+        return( ret );
+    }
+    p += output_len;
+#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if( propose_tls13 )
@@ -987,9 +1036,22 @@ int mbedtls_ssl_write_client_hello( mbedtls_ssl_context *ssl )
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_finish_handshake_msg( ssl,
                                                                 buf_len,
                                                                 msg_len ) );
-        mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
-    }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+        if( ( ssl->handshake->min_tls_version == MBEDTLS_SSL_VERSION_TLS1_3 ) &&
+            ( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 ) )
+        {
+#if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+            mbedtls_ssl_handshake_set_state(
+                ssl, MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO );
+#else
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_EARLY_APP_DATA );
+#endif /* MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE */
+        }
+        else
+#endif
+            mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SERVER_HELLO );
+    }
 
 cleanup:
 

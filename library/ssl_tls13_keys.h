@@ -19,6 +19,9 @@
 #if !defined(MBEDTLS_SSL_TLS1_3_KEYS_H)
 #define MBEDTLS_SSL_TLS1_3_KEYS_H
 
+#include "ssl_misc.h"
+
+
 /* This requires MBEDTLS_SSL_TLS1_3_LABEL( idx, name, string ) to be defined at
  * the point of use. See e.g. the definition of mbedtls_ssl_tls13_labels_union
  * below. */
@@ -91,6 +94,30 @@ extern const struct mbedtls_ssl_tls13_labels_struct mbedtls_ssl_tls13_labels;
  * adjusted since it currently assumes that HKDF key expansion
  * is never used with more than 255 Bytes of output. */
 #define MBEDTLS_SSL_TLS1_3_KEY_SCHEDULE_MAX_EXPANSION_LEN 255
+
+/* Macro to express the length of the verify structure length.
+ *
+ * The structure is computed per TLS 1.3 specification as:
+ *   - 64 bytes of octet 32,
+ *   - 33 bytes for the context string
+ *        (which is either "TLS 1.3, client CertificateVerify"
+ *         or "TLS 1.3, server CertificateVerify"),
+ *   - 1 byte for the octet 0x0, which servers as a separator,
+ *   - 32 or 48 bytes for the Transcript-Hash(Handshake Context, Certificate)
+ *     (depending on the size of the transcript_hash)
+ *
+ * This results in a total size of
+ * - 130 bytes for a SHA256-based transcript hash, or
+ *   (64 + 33 + 1 + 32 bytes)
+ * - 146 bytes for a SHA384-based transcript hash.
+ *   (64 + 33 + 1 + 48 bytes)
+ *
+ */
+#define MBEDTLS_SSL_VERIFY_STRUCT_MAX_SIZE  ( 64 +                 \
+                                              33 +                 \
+                                               1 +                 \
+                                              MBEDTLS_MD_MAX_SIZE  \
+                                            )
 
 /**
  * \brief            The \c HKDF-Expand-Label function from
@@ -449,7 +476,8 @@ int mbedtls_ssl_tls13_derive_resumption_master_secret(
  *                    ephemeral (EC)DH secret). If not \c NULL, this must be
  *                    a readable buffer whose size \p input_len Bytes.
  *                    If \c NULL, an all \c 0 array will be used instead.
- * \param input_len   The length of \p input in Bytes.
+ * \param input_len   The length of \p input in Bytes. This must not be
+ *                    larger than MBEDTLS_SSL_TLS1_3_MAX_IKM_SIZE.
  * \param secret_new  The address of the buffer holding the new secret
  *                    on function exit. This must be a writable buffer
  *                    whose size matches the output size of the hash
@@ -535,17 +563,21 @@ int mbedtls_ssl_tls13_populate_transform( mbedtls_ssl_transform *transform,
 /*
  * TLS 1.3 key schedule evolutions
  *
- *   Early -> Handshake -> Application
+ *   Early Data -> Handshake -> Application
  *
  * Small wrappers around mbedtls_ssl_tls13_evolve_secret().
  */
 
 /**
- * \brief Begin TLS 1.3 key schedule by calculating early secret.
+ * \brief Begin TLS 1.3 key schedule by calculating early secret
+ *        from chosen PSK.
  *
  *        The TLS 1.3 key schedule can be viewed as a simple state machine
  *        with states Initial -> Early -> Handshake -> Application, and
  *        this function represents the Initial -> Early transition.
+ *
+ *        In the early stage, mbedtls_ssl_tls13_generate_early_data_keys()
+ *        can be used to derive the 0-RTT traffic keys.
  *
  * \param ssl  The SSL context to operate on.
  *
@@ -609,6 +641,36 @@ int mbedtls_ssl_tls13_generate_handshake_keys( mbedtls_ssl_context *ssl,
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_key_schedule_stage_application( mbedtls_ssl_context *ssl );
 
+/*
+ * Convenience functions combining
+ *
+ *    mbedtls_ssl_tls13_key_schedule_stage_xxx()
+ *
+ * with
+ *
+ *    mbedtls_ssl_tls13_make_traffic_keys()
+ *
+ * Those functions assume that the key schedule has been moved
+ * to the correct stage via
+ *
+ *    mbedtls_ssl_tls13_key_schedule_stage_xxx().
+ */
+
+/**
+ * \brief Compute traffic keys for 0-RTT.
+ *
+ * \param ssl  The SSL context to operate on. This must be in key schedule stage
+ *             \c Early, see mbedtls_ssl_tls13_key_schedule_stage_early_data().
+ * \param traffic_keys The address at which to store the 0-RTT traffic key
+ *                     keys. This must be writable but may be uninitialized.
+ *
+ * \returns    \c 0 on success.
+ * \returns    A negative error code on failure.
+ */
+int mbedtls_ssl_tls13_generate_early_data_keys(
+    mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
+
+
 /**
  * \brief Compute TLS 1.3 application traffic keys.
  *
@@ -623,7 +685,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_application( mbedtls_ssl_context *ssl )
  */
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_generate_application_keys(
-    mbedtls_ssl_context* ssl, mbedtls_ssl_key_set *traffic_keys );
+    mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
 
 /**
  * \brief Compute TLS 1.3 resumption master secret.
