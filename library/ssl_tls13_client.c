@@ -1187,7 +1187,7 @@ int mbedtls_ssl_tls13_write_client_hello_exts( mbedtls_ssl_context *ssl,
          * `accepted` or `rejected` depending on whether the EncryptedExtension
          * message will contain an early data indication extension or not.
          */
-        ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_INDICATION_SENT;
+        ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_REJECTED;
     }
     else
     {
@@ -1574,7 +1574,7 @@ static int ssl_tls13_parse_encrypted_extensions_early_data_ext(
     /* Nothing to parse */
     ((void) buf);
 
-    ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_ACCEPTED;
+    ssl->early_data_status = MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED;
     return( 0 );
 }
 
@@ -1589,16 +1589,6 @@ int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl )
     return( ssl->early_data_status );
 }
 
-int mbedtls_ssl_set_early_data( mbedtls_ssl_context *ssl,
-                                const unsigned char *buffer, size_t len )
-{
-    if( buffer == NULL || len == 0 )
-        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
-
-    ssl->early_data_buf = buffer;
-    ssl->early_data_len = len;
-    return( 0 );
-}
 #endif /* MBEDTLS_ZERO_RTT */
 
 /* Parse ServerHello message and configure context
@@ -2547,26 +2537,6 @@ static int ssl_tls13_write_early_data_write( mbedtls_ssl_context *ssl,
     size_t buf_len,
     size_t *out_len )
 {
-    if( ssl->early_data_len > buf_len )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "buffer too small" ) );
-        return ( MBEDTLS_ERR_SSL_ALLOC_FAILED );
-    }
-    else
-    {
-        memcpy( buf, ssl->early_data_buf, ssl->early_data_len );
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-        *out_len = ssl->early_data_len;
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", buf, ssl->early_data_len );
-#else
-        buf[ssl->early_data_len] = MBEDTLS_SSL_MSG_APPLICATION_DATA;
-        *out_len = ssl->early_data_len + 1;
-
-        MBEDTLS_SSL_DEBUG_BUF( 3, "Early Data", ssl->out_msg, *out_len );
-#endif /* MBEDTLS_SSL_USE_MPS */
-    }
-
     return( 0 );
 }
 
@@ -2656,7 +2626,7 @@ static int ssl_tls13_write_end_of_early_data_coordinate( mbedtls_ssl_context *ss
 #if defined(MBEDTLS_ZERO_RTT)
     if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
     {
-        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_ACCEPTED )
+        if( ssl->early_data_status == MBEDTLS_SSL_EARLY_DATA_STATUS_ACCEPTED )
             return( SSL_END_OF_EARLY_DATA_WRITE );
 
         /*

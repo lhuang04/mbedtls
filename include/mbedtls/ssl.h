@@ -2065,16 +2065,6 @@ void mbedtls_ssl_conf_authmode( mbedtls_ssl_config *conf, int authmode );
 */
 void mbedtls_ssl_tls13_conf_early_data( mbedtls_ssl_config *conf,
                                         int early_data_enabled );
-
-void mbedtls_ssl_conf_early_data( mbedtls_ssl_config* conf, int early_data,
-                                  size_t max_early_data,
-                                  int(*early_data_callback)( mbedtls_ssl_context*,
-                                                             const unsigned char*,
-                                                             size_t ) );
-#if defined(MBEDTLS_SSL_CLI_C)
-int mbedtls_ssl_set_early_data( mbedtls_ssl_context* ssl, const unsigned char* buffer,
-                                size_t len );
-#endif /* MBEDTLS_SSL_CLI_C */
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
