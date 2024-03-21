@@ -1289,6 +1289,7 @@ void mbedtls_ssl_tls13_handshake_wrapup(mbedtls_ssl_context *ssl)
  *
  */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
                                                    unsigned char *buf,
@@ -1311,15 +1312,15 @@ int mbedtls_ssl_tls13_write_change_cipher_spec(mbedtls_ssl_context *ssl)
     MBEDTLS_SSL_DEBUG_MSG(2, ("=> write change cipher spec"));
 
     /* Write CCS message */
-    MBEDTLS_SSL_PROC_CHK(ssl_tls13_write_change_cipher_spec_body(
-                             ssl, ssl->out_msg,
-                             ssl->out_msg + MBEDTLS_SSL_OUT_CONTENT_LEN,
-                             &ssl->out_msglen));
+    MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_change_cipher_spec_body(
+                              ssl, ssl->out_msg,
+                              ssl->out_msg + MBEDTLS_SSL_OUT_CONTENT_LEN,
+                              &ssl->out_msglen ) );
 
     ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
 
     /* Dispatch message */
-    MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_write_record(ssl, 0));
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, 0 ) );
 
 cleanup:
 
