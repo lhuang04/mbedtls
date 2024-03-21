@@ -607,6 +607,9 @@ int mbedtls_ssl_tls13_generate_handshake_keys(mbedtls_ssl_context *ssl,
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_key_schedule_stage_application(mbedtls_ssl_context *ssl);
 
+int mbedtls_ssl_tls13_generate_early_data_keys(
+    mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
+
 /**
  * \brief Compute TLS 1.3 application traffic keys.
  *
