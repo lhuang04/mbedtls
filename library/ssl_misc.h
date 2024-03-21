@@ -961,6 +961,17 @@ struct mbedtls_ssl_handshake_params {
     unsigned char randbytes[MBEDTLS_CLIENT_HELLO_RANDOM_LEN +
                             MBEDTLS_SERVER_HELLO_RANDOM_LEN];
     /*!<  random bytes            */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if defined(MBEDTLS_ZERO_RTT)
+    /*!< Early data indication:
+    0  -- MBEDTLS_SSL_EARLY_DATA_DISABLED (for no early data), and
+    1  -- MBEDTLS_SSL_EARLY_DATA_ENABLED (for use early data)
+    */
+    int early_data;
+#endif /* MBEDTLS_ZERO_RTT */
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     unsigned char premaster[MBEDTLS_PREMASTER_SIZE];
     /*!<  premaster secret        */
@@ -1666,6 +1677,8 @@ void mbedtls_ssl_write_version(unsigned char version[2], int transport,
                                mbedtls_ssl_protocol_version tls_version);
 uint16_t mbedtls_ssl_read_version(const unsigned char version[2],
                                   int transport);
+
+void ssl_remove_psk( mbedtls_ssl_context *ssl );
 
 static inline size_t mbedtls_ssl_in_hdr_len(const mbedtls_ssl_context *ssl)
 {

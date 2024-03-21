@@ -1289,6 +1289,7 @@ void mbedtls_ssl_tls13_handshake_wrapup(mbedtls_ssl_context *ssl)
  *
  */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
                                                    unsigned char *buf,
