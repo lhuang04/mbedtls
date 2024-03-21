@@ -6388,7 +6388,7 @@ int mbedtls_ssl_write( mbedtls_ssl_context *ssl, const unsigned char *buf, size_
 
     if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
-        if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
+        // if( mbedtls_ssl_is_handshake_over( ssl ) == 0 )
         {
             if( ( ret = mbedtls_ssl_handshake( ssl ) ) != 0 )
             {
