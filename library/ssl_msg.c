@@ -37,6 +37,10 @@
 #include "constant_time_internal.h"
 #include "mbedtls/constant_time.h"
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+#include "mps_all.h"
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 #include <string.h>
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
@@ -81,6 +85,7 @@ int mbedtls_ssl_check_timer(mbedtls_ssl_context *ssl)
     return 0;
 }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_parse_record_header(mbedtls_ssl_context const *ssl,
                                    unsigned char *buf,
@@ -137,6 +142,17 @@ exit:
     MBEDTLS_SSL_DEBUG_MSG(1, ("<= mbedtls_ssl_check_record"));
     return ret;
 }
+#else /* !MBEDTLS_SSL_USE_MPS */
+int mbedtls_ssl_check_record( mbedtls_ssl_context const *ssl,
+                              unsigned char *buf,
+                              size_t buflen )
+{
+    ((void) ssl);
+    ((void) buf);
+    ((void) buflen);
+    return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+}
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 #define SSL_DONT_FORCE_FLUSH 0
 #define SSL_FORCE_FLUSH      1
@@ -1888,10 +1904,7 @@ hmac_failed_etm_disabled:
     return 0;
 }
 
-#undef MAC_NONE
-#undef MAC_PLAINTEXT
-#undef MAC_CIPHERTEXT
-
+#if !defined(MBEDTLS_SSL_USE_MPS)
 /*
  * Fill the input message buffer by appending data to it.
  * The amount of data already fetched is in ssl->in_left.
@@ -2106,7 +2119,26 @@ int mbedtls_ssl_fetch_input(mbedtls_ssl_context *ssl, size_t nb_want)
 
     return 0;
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
+
+cleanup:
+    /*
+     * Remap MPS error codes
+     *
+     * TODO: Consolidate MPS and SSL error codes, so that this isn't necessary.
+     */
+    ret = mbedtls_ssl_mps_remap_error( ret );
+
+    return( ret);
+}
+#else /* MBEDTLS_SSL_USE_MPS */
 /*
  * Flush any data not yet written
  */
@@ -2167,6 +2199,7 @@ int mbedtls_ssl_flush_output(mbedtls_ssl_context *ssl)
 
     return 0;
 }
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 /*
  * Functions to handle the DTLS retransmission state machine
@@ -2977,6 +3010,7 @@ static size_t ssl_get_reassembly_buffer_size(size_t msg_len,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static uint32_t ssl_get_hs_total_len(mbedtls_ssl_context const *ssl)
 {
     return (ssl->in_msg[1] << 16) |
@@ -3104,6 +3138,8 @@ void mbedtls_ssl_update_handshake_status(mbedtls_ssl_context *ssl)
     }
 #endif
 }
+
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 /*
  * DTLS anti-replay: RFC 6347 4.1.2.6
@@ -3435,6 +3471,7 @@ static int ssl_handle_possible_reconnect(mbedtls_ssl_context *ssl)
 }
 #endif /* MBEDTLS_SSL_DTLS_CLIENT_PORT_REUSE && MBEDTLS_SSL_SRV_C */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_check_record_type(uint8_t record_type)
 {
@@ -3765,7 +3802,7 @@ static int ssl_prepare_record_content(mbedtls_ssl_context *ssl,
         MBEDTLS_SSL_DEBUG_BUF(4, "input payload after decrypt",
                               rec->buf + rec->data_offset, rec->data_len);
 
-#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
         /* We have already checked the record content type
          * in ssl_parse_record_header(), failing or silently
          * dropping the record in the case of an unknown type.
@@ -3777,7 +3814,7 @@ static int ssl_prepare_record_content(mbedtls_ssl_context *ssl,
             MBEDTLS_SSL_DEBUG_MSG(1, ("unknown record type"));
             return MBEDTLS_ERR_SSL_INVALID_RECORD;
         }
-#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID || MBEDTLS_SSL_PROTO_TLS1_3 */
 
         if (rec->data_len == 0) {
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
@@ -4822,6 +4859,7 @@ int mbedtls_ssl_handle_message_type(mbedtls_ssl_context *ssl)
 
     return 0;
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_send_fatal_handshake_failure(mbedtls_ssl_context *ssl)
 {
@@ -4846,6 +4884,31 @@ int mbedtls_ssl_send_alert_message(mbedtls_ssl_context *ssl,
 
     MBEDTLS_SSL_DEBUG_MSG(2, ("=> send alert message"));
     MBEDTLS_SSL_DEBUG_MSG(3, ("send alert level=%u message=%u", level, message));
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+    ret = mbedtls_mps_flush( &ssl->mps->l4 );
+    if( ret != 0 )
+        return( ret );
+
+    if( level == MBEDTLS_SSL_ALERT_LEVEL_FATAL )
+    {
+        ret = mbedtls_mps_send_fatal( &ssl->mps->l4, message );
+        if( ret != 0 )
+            return( ret );
+    }
+    else
+    {
+        ret = mbedtls_mps_write_alert( &ssl->mps->l4, message );
+        if( ret != 0 )
+            return( ret );
+    }
+
+    ret = mbedtls_mps_flush( &ssl->mps->l4 );
+    if( ret != 0 )
+        return( ret );
+
+#else /* MBEDTLS_SSL_USE_MPS */
 
     ssl->out_msgtype = MBEDTLS_SSL_MSG_ALERT;
     ssl->out_msglen = 2;
@@ -4940,6 +5003,8 @@ int mbedtls_ssl_parse_change_cipher_spec(mbedtls_ssl_context *ssl)
     return 0;
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
 /* Once ssl->out_hdr as the address of the beginning of the
  * next outgoing record is set, deduce the other pointers.
  *
@@ -4948,6 +5013,7 @@ int mbedtls_ssl_parse_change_cipher_spec(mbedtls_ssl_context *ssl)
  *       and the caller has to make sure there's space for this.
  */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static size_t ssl_transform_get_explicit_iv_len(
     mbedtls_ssl_transform const *transform)
 {
@@ -5059,7 +5125,16 @@ void mbedtls_ssl_reset_in_out_pointers(mbedtls_ssl_context *ssl)
     mbedtls_ssl_update_out_pointers(ssl, NULL /* no transform enabled */);
     mbedtls_ssl_update_in_pointers(ssl);
 }
+#endif /* ! MBEDTLS_SSL_USE_MPS */
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+size_t mbedtls_ssl_get_bytes_avail( const mbedtls_ssl_context *ssl )
+{
+    /* TODO: Implement */
+    ((void) ssl);
+    return( 0 );
+}
+#else /* MBEDTLS_SSL_USE_MPS */
 /*
  * SSL get accessors
  */
@@ -5067,9 +5142,18 @@ size_t mbedtls_ssl_get_bytes_avail(const mbedtls_ssl_context *ssl)
 {
     return ssl->in_offt == NULL ? 0 : ssl->in_msglen;
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_check_pending(const mbedtls_ssl_context *ssl)
 {
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    if( ssl->tls_version == MBEDTLS_SSL_VERSION_TLS1_3 )
+    {
+        return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+    }
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     /*
      * Case A: We're currently holding back
      * a message for further processing.
@@ -5120,6 +5204,10 @@ int mbedtls_ssl_check_pending(const mbedtls_ssl_context *ssl)
     return 0;
 }
 
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+
+    return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+}
 
 int mbedtls_ssl_get_record_expansion(const mbedtls_ssl_context *ssl)
 {
@@ -5214,6 +5302,8 @@ int mbedtls_ssl_get_record_expansion(const mbedtls_ssl_context *ssl)
     return (int) (out_hdr_len + transform_expansion);
 }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+
 #if defined(MBEDTLS_SSL_RENEGOTIATION)
 /*
  * Check record counters and renegotiate if they're above the limit.
@@ -5246,6 +5336,8 @@ static int ssl_check_ctr_renegotiate(mbedtls_ssl_context *ssl)
     return mbedtls_ssl_renegotiate(ssl);
 }
 #endif /* MBEDTLS_SSL_RENEGOTIATION */
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
 
@@ -5405,6 +5497,145 @@ static int ssl_handle_hs_message_post_handshake(mbedtls_ssl_context *ssl)
     return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+int mbedtls_ssl_read( mbedtls_ssl_context *ssl, unsigned char *buf, size_t len )
+{
+    int ret, msg_type;
+    size_t data_read;
+    unsigned char *src;
+    mbedtls_mps_reader *rd;
+
+    ret = mbedtls_ssl_handle_pending_alert( ssl );
+    if( ret != 0 )
+        goto cleanup;
+
+    if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
+    {
+        ret = mbedtls_ssl_handshake( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_handshake", ret );
+            goto cleanup;
+        }
+    }
+
+    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
+    msg_type = ret;
+
+    if( msg_type == MBEDTLS_MPS_MSG_HS )
+    {
+        ret = ssl_handle_hs_message_post_handshake( ssl );
+        if( ret != 0 )
+        {
+            MBEDTLS_SSL_DEBUG_RET(
+                1, "ssl_handle_hs_message_post_handshake", ret );
+            goto cleanup;
+        }
+
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+    }
+
+    if( msg_type == MBEDTLS_MPS_MSG_ALERT )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ignoring non-fatal non-closure alert" ) );
+        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
+
+        return( MBEDTLS_ERR_SSL_WANT_READ );
+    }
+
+    if( msg_type != MBEDTLS_MPS_MSG_APP )
+        return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_application( &ssl->mps->l4, &rd ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_get( rd, len, &src, &data_read ) );
+    memcpy( buf, src, data_read );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_reader_commit( rd ) );
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_consume( &ssl->mps->l4 ) );
+    return( data_read );
+
+cleanup:
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /*
+     * Remap MPS error codes
+     *
+     * TODO: Consolidate MPS and SSL error codes, so that this isn't necessary.
+     */
+    ret = mbedtls_ssl_mps_remap_error( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    return( ret );
+}
+
+int mbedtls_ssl_write( mbedtls_ssl_context *ssl,
+                       const unsigned char *buf, size_t len )
+{
+    int ret;
+    mbedtls_writer *msg;
+    unsigned char *wr_buf;
+    mbedtls_mps_size_t wr_buf_len;
+
+    ret = mbedtls_ssl_handle_pending_alert( ssl );
+    if( ret != 0 )
+        goto cleanup;
+
+    /* Make sure we can write a new message. */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_flush( &ssl->mps->l4 ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
+                                                         &msg ) );
+
+    /* Request write-buffer */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
+                                              &wr_buf, &wr_buf_len ) );
+
+    if( wr_buf_len < len )
+        len = wr_buf_len;
+
+    memcpy( wr_buf, buf, len );
+
+    /* Commit message */
+    MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
+                                               wr_buf_len - len ) );
+
+    MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
+    ret = len;
+
+cleanup:
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    /*
+     * Remap MPS error codes
+     *
+     * TODO: Consolidate MPS and SSL error codes, so that this isn't necessary.
+     */
+    ret = mbedtls_ssl_mps_remap_error( ret );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
+    return( ret );
+}
+
+/*
+ * Notify the peer that the connection is being closed
+ */
+int mbedtls_ssl_close_notify( mbedtls_ssl_context *ssl )
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    if( ssl == NULL || ssl->conf == NULL )
+        return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write close notify" ) );
+
+    ret = mbedtls_mps_close( &ssl->mps->l4 );
+    if( ret != 0 )
+        return( ret );
+
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write close notify" ) );
+
+    return( 0 );
+}
+#else /* MBEDTLS_SSL_USE_MPS */
 /*
  * Receive application data decrypted from the SSL layer
  */
@@ -5432,7 +5663,7 @@ int mbedtls_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, size_t len)
             }
         }
     }
-#endif
+#endif /* MBEDTLS_SSL_PROTO_DTLS */
 
     /*
      * Check if renegotiation is necessary and/or handshake is
@@ -5757,6 +5988,9 @@ void mbedtls_ssl_transform_free(mbedtls_ssl_transform *transform)
 void mbedtls_ssl_set_inbound_transform(mbedtls_ssl_context *ssl,
                                        mbedtls_ssl_transform *transform)
 {
+    if( ssl->transform_in == transform )
+        return;
+
     ssl->transform_in = transform;
     memset(ssl->in_ctr, 0, MBEDTLS_SSL_SEQUENCE_NUMBER_LEN);
 }
@@ -5806,6 +6040,8 @@ static void ssl_buffering_free_slot(mbedtls_ssl_context *ssl,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#endif /* !MBEDTLS_SSL_USE_MPS */
+
 /*
  * Convert version numbers to/from wire format
  * and, for DTLS, to/from TLS equivalent.
@@ -5844,6 +6080,44 @@ uint16_t mbedtls_ssl_read_version(const unsigned char version[2],
     return tls_version;
 }
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+
+/*
+ * Send pending fatal alerts or warnings.
+ */
+int mbedtls_ssl_handle_pending_alert( mbedtls_ssl_context *ssl )
+{
+    int ret;
+
+    if( ssl->send_alert == 0 )
+        return( 0 );
+
+    /* Send alert if requested */
+    if( ssl->send_alert == 1 )
+    {
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> send alert message" ) );
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "send alert level=%u message=%u",
+                                    MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+                                    ssl->alert_type ) );
+
+        ret = mbedtls_mps_send_fatal( &ssl->mps->l4,
+                                      ssl->alert_type );
+        ssl->send_alert = 2;
+
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= send alert message" ) );
+        if( ret != 0 )
+            return( ret );
+    }
+
+    ret = mbedtls_mps_flush( &ssl->mps->l4 );
+    if( ret != 0 )
+        return( ret );
+
+    return( ssl->alert_reason );
+}
+
+#else /* MBEDTLS_SSL_USE_MPS */
+
 /*
  * Send pending fatal alert.
  * 0,   No alert message.
@@ -5876,6 +6150,8 @@ int mbedtls_ssl_handle_pending_alert(mbedtls_ssl_context *ssl)
 
     return ssl->alert_reason;
 }
+
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 /*
  * Set pending fatal alert flag.
