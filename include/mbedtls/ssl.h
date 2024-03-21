@@ -336,6 +336,9 @@
 #define MBEDTLS_SSL_EARLY_DATA_DISABLED        0
 #define MBEDTLS_SSL_EARLY_DATA_ENABLED         1
 
+#define MBEDTLS_SSL_EARLY_DATA_OFF        0
+#define MBEDTLS_SSL_EARLY_DATA_ON         1
+
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED    0
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_SUPPORTED      1
 
@@ -523,7 +526,10 @@
 #define MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION     100  /* 0x64 */
 #define MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION    109  /* 0x6d -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT      110  /* 0x6E */
+#define MBEDTLS_SSL_ALERT_MSG_CERT_UNOBTAINABLE          111  /* 0x6f -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME    112  /* 0x70 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_STATUS_RESPONSE   113  /* 0x71 -- new in TLS 1.3 */
+#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_HASH_VALUE        114  /* 0x72 -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY 115  /* 0x73 */
 #define MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED        116  /* 0x74 */
 #define MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL 120 /* 0x78 */
@@ -534,6 +540,7 @@
 #define MBEDTLS_SSL_HS_HELLO_VERIFY_REQUEST     3
 #define MBEDTLS_SSL_HS_NEW_SESSION_TICKET       4
 #define MBEDTLS_SSL_HS_END_OF_EARLY_DATA        5 // NEW IN TLS 1.3
+#define MBEDTLS_SSL_HS_HELLO_RETRY_REQUEST      6 // NEW IN TLS 1.3 (RESERVED)
 #define MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS     8 // NEW IN TLS 1.3
 #define MBEDTLS_SSL_HS_CERTIFICATE             11
 #define MBEDTLS_SSL_HS_SERVER_KEY_EXCHANGE     12
@@ -672,14 +679,18 @@ typedef enum {
     MBEDTLS_SSL_SERVER_HELLO_VERIFY_REQUEST_SENT,
     MBEDTLS_SSL_HELLO_RETRY_REQUEST,
     MBEDTLS_SSL_ENCRYPTED_EXTENSIONS,
+    MBEDTLS_SSL_SECOND_CLIENT_HELLO,
     MBEDTLS_SSL_END_OF_EARLY_DATA,
     MBEDTLS_SSL_CLIENT_CERTIFICATE_VERIFY,
-    MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
+    MBEDTLS_SSL_HANDSHAKE_FINISH_ACK,
     MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO,
+    MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED,
+    MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO,
     MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO,
     MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST,
     MBEDTLS_SSL_HANDSHAKE_OVER,
     MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET,
+    MBEDTLS_SSL_EARLY_APP_DATA,
     MBEDTLS_SSL_TLS1_3_NEW_SESSION_TICKET_FLUSH,
 }
 mbedtls_ssl_states;
@@ -821,7 +832,14 @@ typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
     (MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_PSK_RESUMPTION             |      \
      MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_PSK_EPHEMERAL_RESUMPTION   |      \
      MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_EARLY_DATA)
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
+typedef enum
+{
+    allow_early_data = 1,
+    allow_dhe_resumption = 2,
+    allow_psk_resumption = 4,
+} mbedtls_ssl_ticket_flags;
 
 /**
  * \brief          Callback type: server-side session cache getter
@@ -1201,6 +1219,10 @@ struct mbedtls_ssl_session {
     size_t MBEDTLS_PRIVATE(ticket_len);          /*!< session ticket length   */
     uint32_t MBEDTLS_PRIVATE(ticket_lifetime);   /*!< ticket lifetime hint    */
 #endif /* MBEDTLS_SSL_SESSION_TICKETS && MBEDTLS_SSL_CLI_C */
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EARLY_DATA)
+    uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
+#endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
     uint8_t MBEDTLS_PRIVATE(endpoint);          /*!< 0: client, 1: server */
@@ -4477,6 +4499,18 @@ int mbedtls_ssl_get_ciphersuite_id_from_ssl(const mbedtls_ssl_context *ssl);
  */
 const char *mbedtls_ssl_get_ciphersuite(const mbedtls_ssl_context *ssl);
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+/**
+* \brief          Return the negotiated key exchange mode id
+*
+* \param ssl      SSL context
+*
+* \return         mbedtls_key_exchange_type_t
+*/
+mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange(const mbedtls_ssl_context* ssl);
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 /**
  * \brief          Return the (D)TLS protocol version negotiated in the
