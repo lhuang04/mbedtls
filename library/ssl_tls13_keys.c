@@ -891,6 +891,7 @@ exit:
     mbedtls_platform_zeroize(binder_key,   sizeof(binder_key));
     return ret;
 }
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
 
 int mbedtls_ssl_tls13_populate_transform(mbedtls_ssl_transform *transform,
                                          int endpoint,
@@ -1455,7 +1456,7 @@ int mbedtls_ssl_tls13_key_schedule_stage_handshake(mbedtls_ssl_context *ssl)
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED */
 
     /*
-     * Compute the Handshake Secret
+     * Compute the Handshake secret
      */
     ret = mbedtls_ssl_tls13_evolve_secret(hash_alg,
                                           handshake->tls13_master_secrets.early,
@@ -1734,7 +1735,15 @@ int mbedtls_ssl_tls13_compute_application_transform(mbedtls_ssl_context *ssl)
         goto cleanup;
     }
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
     ssl->transform_application = transform_application;
+#else /* MBEDTLS_SSL_USE_MPS */
+    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
+                                        transform_application,
+                                        &ssl->epoch_application );
+    if( ret != 0 )
+        goto cleanup;
+#endif /* MBEDTLS_SSL_USE_MPS */
 
 cleanup:
 

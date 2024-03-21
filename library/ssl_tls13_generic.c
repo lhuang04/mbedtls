@@ -78,6 +78,7 @@ cleanup:
 
     return ret;
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
 /*
@@ -453,7 +454,6 @@ int mbedtls_ssl_tls13_parse_certificate(mbedtls_ssl_context *ssl,
 
         switch (ret) {
             case 0: /*ok*/
-                break;
             case MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG + MBEDTLS_ERR_OID_NOT_FOUND:
                 /* Ignore certificate with an unknown algorithm: maybe a
                    prior certificate was already trusted. */
@@ -754,6 +754,10 @@ int mbedtls_ssl_tls13_process_certificate(mbedtls_ssl_context *ssl)
 
     mbedtls_ssl_add_hs_msg_to_checksum(ssl, MBEDTLS_SSL_HS_CERTIFICATE,
                                        buf, buf_len);
+
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif
 
 cleanup:
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
@@ -1174,6 +1178,10 @@ int mbedtls_ssl_tls13_process_finished_message(mbedtls_ssl_context *ssl)
     mbedtls_ssl_add_hs_msg_to_checksum(ssl, MBEDTLS_SSL_HS_FINISHED,
                                        buf, buf_len);
 
+#if defined(MBEDTLS_SSL_USE_MPS)
+    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
+#endif /* MBEDTLS_SSL_USE_MPS */
+
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG(2, ("<= parse finished message"));
@@ -1289,6 +1297,92 @@ void mbedtls_ssl_tls13_handshake_wrapup(mbedtls_ssl_context *ssl)
  *
  */
 #if defined(MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE)
+
+#define SSL_WRITE_CCS_NEEDED     0
+#define SSL_WRITE_CCS_SKIP       1
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *ssl )
+{
+    int ret = SSL_WRITE_CCS_NEEDED;
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        if( ssl->state == MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO )
+        {
+            /* Only transmit the CCS if we have not done so
+             * earlier already after the HRR.
+             */
+            if( ssl->handshake->hello_retry_request_count == 0 )
+                ret = SSL_WRITE_CCS_NEEDED;
+            else
+                ret = SSL_WRITE_CCS_SKIP;
+        }
+    }
+#endif /* MBEDTLS_SSL_SRV_C */
+
+#if defined(MBEDTLS_SSL_CLI_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    {
+#if defined(MBEDTLS_ZERO_RTT)
+        switch( ssl->state )
+        {
+            case MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO:
+                if( ssl->handshake->early_data != MBEDTLS_SSL_EARLY_DATA_ON )
+                    ret = SSL_WRITE_CCS_SKIP;
+                break;
+
+            case MBEDTLS_SSL_CLIENT_CCS_BEFORE_2ND_CLIENT_HELLO:
+            case MBEDTLS_SSL_CLIENT_CCS_AFTER_SERVER_FINISHED:
+                if( ssl->handshake->early_data == MBEDTLS_SSL_EARLY_DATA_ON )
+                    ret = SSL_WRITE_CCS_SKIP;
+                break;
+
+            default:
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+#else /* MBEDTLS_ZERO_RTT */
+        if( ssl->state == MBEDTLS_SSL_CLIENT_CCS_AFTER_CLIENT_HELLO )
+            ret = SSL_WRITE_CCS_SKIP;
+#endif /* MBEDTLS_ZERO_RTT */
+    }
+#endif /* MBEDTLS_SSL_CLI_C */
+    return( ret );
+}
+
+MBEDTLS_CHECK_RETURN_CRITICAL
+static int ssl_tls13_finalize_change_cipher_spec( mbedtls_ssl_context *ssl )
+{
+    (void) ssl;
+
+#if defined(MBEDTLS_SSL_SRV_C)
+    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        switch( ssl->state )
+        {
+            case MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO:
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
+                ssl->handshake->ccs_sent++;
+                break;
+
+            case MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST:
+                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
+                ssl->handshake->ccs_sent++;
+                break;
+
+            default:
+                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
+                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
+        }
+    }
+#endif /* MBEDTLS_SSL_SRV_C */
+
+    return( 0 );
+}
+
+#if !defined(MBEDTLS_SSL_USE_MPS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
                                                    unsigned char *buf,
@@ -1303,6 +1397,7 @@ static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
 
     return 0;
 }
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_tls13_write_change_cipher_spec(mbedtls_ssl_context *ssl)
 {
@@ -1316,7 +1411,9 @@ int mbedtls_ssl_tls13_write_change_cipher_spec(mbedtls_ssl_context *ssl)
                              ssl->out_msg + MBEDTLS_SSL_OUT_CONTENT_LEN,
                              &ssl->out_msglen));
 
-    ssl->out_msgtype = MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC;
+    if( ret == SSL_WRITE_CCS_NEEDED )
+    {
+#if defined(MBEDTLS_SSL_USE_MPS)
 
     /* Dispatch message */
     MBEDTLS_SSL_PROC_CHK(mbedtls_ssl_write_record(ssl, 0));
