@@ -2874,7 +2874,6 @@ int mbedtls_ssl_write_record(mbedtls_ssl_context *ssl, int force_flush)
 
     return 0;
 }
-#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
 
