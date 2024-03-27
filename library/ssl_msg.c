@@ -5484,32 +5484,6 @@ static int ssl_tls12_handle_hs_message_post_handshake(mbedtls_ssl_context *ssl)
 }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
-void mbedtls_ssl_transform_free( mbedtls_ssl_transform *transform )
-{
-    if( transform == NULL )
-        return;
-
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_destroy_key( transform->psa_key_enc );
-    psa_destroy_key( transform->psa_key_dec );
-#else
-    mbedtls_cipher_free( &transform->cipher_ctx_enc );
-    mbedtls_cipher_free( &transform->cipher_ctx_dec );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
-#if defined(MBEDTLS_SSL_SOME_SUITES_USE_MAC)
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-    psa_destroy_key( transform->psa_mac_enc );
-    psa_destroy_key( transform->psa_mac_dec );
-#else
-    mbedtls_md_free( &transform->md_ctx_enc );
-    mbedtls_md_free( &transform->md_ctx_dec );
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-#endif
-
-    mbedtls_platform_zeroize( transform, sizeof( mbedtls_ssl_transform ) );
-}
-
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_handle_hs_message_post_handshake(mbedtls_ssl_context *ssl)
 {
