@@ -3010,6 +3010,7 @@ static size_t ssl_get_reassembly_buffer_size(size_t msg_len,
 
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
+#if !defined(MBEDTLS_SSL_USE_MPS)
 static uint32_t ssl_get_hs_total_len(mbedtls_ssl_context const *ssl)
 {
     return (ssl->in_msg[1] << 16) |
