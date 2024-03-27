@@ -1462,6 +1462,7 @@ int mbedtls_ssl_setup(mbedtls_ssl_context *ssl,
     }
 
     mbedtls_ssl_reset_in_out_pointers(ssl);
+#endif /* !MBEDTLS_SSL_USE_MPS */
 
 #if defined(MBEDTLS_SSL_DTLS_SRTP)
     memset(&ssl->dtls_srtp_info, 0, sizeof(ssl->dtls_srtp_info));
@@ -1580,6 +1581,7 @@ void mbedtls_ssl_session_reset_msg_layer(mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_SSL_LEGACY_MSG_LAYER_REQUIRED */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+#if !defined(MBEDTLS_SSL_USE_MPS)
     mbedtls_ssl_transform_free(ssl->transform_application);
     mbedtls_free(ssl->transform_application);
     ssl->transform_application = NULL;
@@ -4985,6 +4987,7 @@ void mbedtls_ssl_free(mbedtls_ssl_context *ssl)
         ssl->in_buf = NULL;
     }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if (ssl->transform) {
         mbedtls_ssl_transform_free(ssl->transform);
         mbedtls_free(ssl->transform);
