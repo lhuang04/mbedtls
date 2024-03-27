@@ -1798,6 +1798,9 @@ void mbedtls_ssl_write_version(unsigned char version[2], int transport,
 uint16_t mbedtls_ssl_read_version(const unsigned char version[2],
                                   int transport);
 
+void ssl_remove_psk( mbedtls_ssl_context *ssl );
+
+
 static inline size_t mbedtls_ssl_in_hdr_len(const mbedtls_ssl_context *ssl)
 {
 #if !defined(MBEDTLS_SSL_PROTO_DTLS)

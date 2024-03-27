@@ -2256,7 +2256,7 @@ int mbedtls_ssl_conf_psk(mbedtls_ssl_config *conf,
     return ret;
 }
 
-static void ssl_remove_psk(mbedtls_ssl_context *ssl)
+void ssl_remove_psk(mbedtls_ssl_context* ssl)
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if (!mbedtls_svc_key_id_is_null(ssl->handshake->psk_opaque)) {
