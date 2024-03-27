@@ -3372,6 +3372,16 @@ const char *mbedtls_ssl_get_ciphersuite(const mbedtls_ssl_context *ssl)
     return mbedtls_ssl_get_ciphersuite_name(ssl->session->ciphersuite);
 }
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange( const mbedtls_ssl_context* ssl )
+{
+    if( ssl == NULL || ssl->session == NULL )
+        return( MBEDTLS_KEY_EXCHANGE_NONE );
+
+    return ( ssl->handshake->key_exchange_mode );
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
 const char *mbedtls_ssl_get_version(const mbedtls_ssl_context *ssl)
 {
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
