@@ -1591,7 +1591,6 @@ struct mbedtls_ssl_config {
 #endif /* MBEDTLS_SSL_SRV_C */
 
 #endif /* MBEDTLS_SSL_EARLY_DATA */
-#endif /* MBEDTLS_SSL_HANDSHAKE_WITH_PSK_ENABLED */
 
 #if defined(MBEDTLS_SSL_ALPN)
     const char **MBEDTLS_PRIVATE(alpn_list);         /*!< ordered list of protocols          */
@@ -2938,6 +2937,7 @@ void mbedtls_ssl_conf_dtls_cookies(mbedtls_ssl_config *conf,
                                    mbedtls_ssl_cookie_write_t *f_cookie_write,
                                    mbedtls_ssl_cookie_check_t *f_cookie_check,
                                    void *p_cookie);
+#endif /* defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) */
 
 /**
  * \brief          Set client's transport-level identification info.
