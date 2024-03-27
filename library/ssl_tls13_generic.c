@@ -453,6 +453,7 @@ int mbedtls_ssl_tls13_parse_certificate(mbedtls_ssl_context *ssl,
 
         switch (ret) {
             case 0: /*ok*/
+                break;
             case MBEDTLS_ERR_X509_UNKNOWN_SIG_ALG + MBEDTLS_ERR_OID_NOT_FOUND:
                 /* Ignore certificate with an unknown algorithm: maybe a
                    prior certificate was already trusted. */
@@ -753,10 +754,6 @@ int mbedtls_ssl_tls13_process_certificate(mbedtls_ssl_context *ssl)
 
     mbedtls_ssl_add_hs_msg_to_checksum(ssl, MBEDTLS_SSL_HS_CERTIFICATE,
                                        buf, buf_len);
-
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif
 
 cleanup:
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED */
@@ -1177,10 +1174,6 @@ int mbedtls_ssl_tls13_process_finished_message(mbedtls_ssl_context *ssl)
     mbedtls_ssl_add_hs_msg_to_checksum(ssl, MBEDTLS_SSL_HS_FINISHED,
                                        buf, buf_len);
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 cleanup:
 
     MBEDTLS_SSL_DEBUG_MSG(2, ("<= parse finished message"));
@@ -1381,7 +1374,6 @@ static int ssl_tls13_finalize_change_cipher_spec( mbedtls_ssl_context *ssl )
     return( 0 );
 }
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
                                                    unsigned char *buf,
@@ -1396,7 +1388,6 @@ static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
 
     return 0;
 }
-#endif /* !MBEDTLS_SSL_USE_MPS */
 
 int mbedtls_ssl_tls13_write_change_cipher_spec(mbedtls_ssl_context *ssl)
 {
