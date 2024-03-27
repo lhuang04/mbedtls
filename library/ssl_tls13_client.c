@@ -3007,8 +3007,6 @@ static int ssl_tls13_flush_buffers(mbedtls_ssl_context *ssl)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_handshake_wrapup(mbedtls_ssl_context *ssl)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
     mbedtls_ssl_tls13_handshake_wrapup(ssl);
 
     mbedtls_ssl_handshake_set_state(ssl, MBEDTLS_SSL_HANDSHAKE_OVER);
