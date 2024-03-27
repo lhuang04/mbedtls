@@ -1555,7 +1555,6 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_finish_handshake_msg(mbedtls_ssl_context *ssl,
                                      size_t buf_len, size_t msg_len);
 
-#if !defined(MBEDTLS_SSL_USE_MPS)
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_write_record(mbedtls_ssl_context *ssl, int force_flush);
 MBEDTLS_CHECK_RETURN_CRITICAL
@@ -1585,6 +1584,7 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_parse_finished(mbedtls_ssl_context *ssl);
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_write_finished(mbedtls_ssl_context *ssl);
+#endif
 
 void mbedtls_ssl_optimize_checksum(mbedtls_ssl_context *ssl,
                                    const mbedtls_ssl_ciphersuite_t *ciphersuite_info);
