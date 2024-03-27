@@ -5345,12 +5345,6 @@ static int ssl_check_ctr_renegotiate(mbedtls_ssl_context *ssl)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_check_new_session_ticket(mbedtls_ssl_context *ssl)
 {
-#if defined(MBEDTLS_SSL_USE_MPS)
-    int ret;
-    mbedtls_mps_handshake_in msg;
-    ret = mbedtls_mps_read_handshake( &ssl->mps->l4, &msg );
-    if( ret != 0 )
-        return( ret );
 
     if ((ssl->in_hslen == mbedtls_ssl_hs_hdr_len(ssl)) ||
         (ssl->in_msg[0] != MBEDTLS_SSL_HS_NEW_SESSION_TICKET)) {
@@ -5358,7 +5352,6 @@ static int ssl_tls13_check_new_session_ticket(mbedtls_ssl_context *ssl)
     }
 
     ssl->keep_current_message = 1;
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     MBEDTLS_SSL_DEBUG_MSG(3, ("NewSessionTicket received"));
     mbedtls_ssl_handshake_set_state(ssl,
