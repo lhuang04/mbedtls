@@ -804,21 +804,6 @@ exit:
     return ret;
 }
 
-#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED)
-/* mbedtls_ssl_tls13_create_psk_binder():
- *
- *                0
- *                |
- *                v
- *   PSK ->  HKDF-Extract = Early Secret
- *                |
- *                +------> Derive-Secret( .,
- *                |                      "ext binder" |
- *                |                      "res binder",
- *                |                      "" )
- *                |                     = binder_key
- *                ...
- */
 int mbedtls_ssl_tls13_create_psk_binder(mbedtls_ssl_context *ssl,
                                         const psa_algorithm_t hash_alg,
                                         unsigned char const *psk, size_t psk_len,
@@ -906,7 +891,6 @@ exit:
     mbedtls_platform_zeroize(binder_key,   sizeof(binder_key));
     return ret;
 }
-#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_PSK_ENABLED */
 
 int mbedtls_ssl_tls13_populate_transform(mbedtls_ssl_transform *transform,
                                          int endpoint,
