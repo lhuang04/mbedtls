@@ -2206,40 +2206,13 @@ MBEDTLS_CHECK_RETURN_CRITICAL
 int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
 {
     int ret;
-#if defined(MBEDTLS_SSL_USE_MPS) && defined(MBEDTLS_ZERO_RTT)
-    mbedtls_writer *msg;
-    unsigned char *buf;
-    mbedtls_mps_size_t buf_len, msg_len;
-#endif /* MBEDTLS_SSL_USE_MPS && MBEDTLS_ZERO_RTT */
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write early data" ) );
 
     MBEDTLS_SSL_PROC_CHK_NEG( ssl_tls13_write_early_data_coordinate( ssl ) );
     if( ret == SSL_EARLY_DATA_WRITE )
     {
 #if defined(MBEDTLS_ZERO_RTT)
-
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_prepare( ssl ) );
-#if defined(MBEDTLS_SSL_USE_MPS)
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_write_application( &ssl->mps->l4,
-                                                             &msg ) );
-
-        /* Request write-buffer */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_get( msg, MBEDTLS_MPS_SIZE_MAX,
-                                                  &buf, &buf_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_write(
-                                  ssl, buf, buf_len, &msg_len ) );
-
-        /* Commit message */
-        MBEDTLS_SSL_PROC_CHK( mbedtls_writer_commit_partial( msg,
-                                                             buf_len - msg_len ) );
-
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_dispatch( &ssl->mps->l4 ) );
-
-        /* Update state */
-        MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_postprocess( ssl ) );
-
-#else  /* MBEDTLS_SSL_USE_MPS */
         /* Write early-data to message buffer. */
         MBEDTLS_SSL_PROC_CHK( ssl_tls13_write_early_data_write( ssl, ssl->out_msg,
                                                                 MBEDTLS_SSL_OUT_CONTENT_LEN,
@@ -2252,9 +2225,6 @@ int ssl_tls13_write_early_data_process( mbedtls_ssl_context *ssl )
 
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, 1 ) );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 #else /* MBEDTLS_ZERO_RTT */
         /* Should never happen */
         return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
@@ -2437,27 +2407,10 @@ static int ssl_tls13_write_early_data_prepare( mbedtls_ssl_context *ssl )
     if( ret != 0 )
         return( ret );
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    /* Register transform with MPS. */
-    ret = mbedtls_mps_add_key_material( &ssl->mps->l4,
-                                        transform_earlydata,
-                                        &ssl->handshake->epoch_earlydata );
-    if( ret != 0 )
-        return( ret );
-
-    /* Use new transform for outgoing data. */
-    ret = mbedtls_mps_set_outgoing_keys( &ssl->mps->l4,
-                                         ssl->handshake->epoch_earlydata );
-    if( ret != 0 )
-        return( ret );
-#else /* MBEDTLS_SSL_USE_MPS */
-
     /* Activate transform */
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "Switch to 0-RTT keys for outbound traffic" ) );
     ssl->handshake->transform_earlydata = transform_earlydata;
     mbedtls_ssl_set_outbound_transform( ssl, ssl->handshake->transform_earlydata );
-
-#endif /* MBEDTLS_SSL_USE_MPS */
 
     return( 0 );
 }
