@@ -1500,27 +1500,6 @@ static int ssl_tls13_check_server_hello_session_id_echo(mbedtls_ssl_context *ssl
     return 0;
 }
 
-#if defined(MBEDTLS_SSL_MAX_FRAGMENT_LENGTH)
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_parse_max_fragment_length_ext( mbedtls_ssl_context *ssl,
-                                                    const unsigned char *buf,
-                                                    size_t len )
-{
-    /*
-     * server should use the extension only if we did,
-     * and if so the server's value should match ours ( and len is always 1 )
-     */
-    if( ssl->conf->mfl_code == MBEDTLS_SSL_MAX_FRAG_LEN_NONE ||
-        len != 1 ||
-        buf[0] != ssl->conf->mfl_code )
-    {
-        return( MBEDTLS_ERR_SSL_ILLEGAL_PARAMETER );
-    }
-
-    return( 0 );
-}
-#endif /* MBEDTLS_SSL_MAX_FRAGMENT_LENGTH */
-
 #if defined(MBEDTLS_ZERO_RTT)
 /* Early Data Extension
 *
@@ -2171,10 +2150,6 @@ static int ssl_tls13_process_encrypted_extensions(mbedtls_ssl_context *ssl)
     mbedtls_ssl_add_hs_msg_to_checksum(ssl, MBEDTLS_SSL_HS_ENCRYPTED_EXTENSIONS,
                                        buf, buf_len);
 
-#if defined(MBEDTLS_SSL_USE_MPS)
-    MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_mps_hs_consume_full_hs_msg( ssl ) );
-#endif /* MBEDTLS_SSL_USE_MPS */
-
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
     if (mbedtls_ssl_tls13_key_exchange_mode_with_psk(ssl)) {
         mbedtls_ssl_handshake_set_state(ssl, MBEDTLS_SSL_SERVER_FINISHED);
@@ -2627,39 +2602,6 @@ static int ssl_tls13_write_end_of_early_data_postprocess( mbedtls_ssl_context *s
  * - SSL_CERTIFICATE_REQUEST_SKIP
  * indicating if a Certificate Request is expected or not.
  */
-#if defined(MBEDTLS_SSL_USE_MPS)
-MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_certificate_request_coordinate( mbedtls_ssl_context *ssl )
-{
-    int ret;
-    mbedtls_mps_handshake_in msg;
-
-    if( mbedtls_ssl_tls13_key_exchange_mode_with_psk( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "<= skip parse certificate request" ) );
-        return( SSL_CERTIFICATE_REQUEST_SKIP );
-    }
-
-    MBEDTLS_SSL_PROC_CHK_NEG( mbedtls_mps_read( &ssl->mps->l4 ) );
-    if( ret == MBEDTLS_MPS_MSG_HS )
-    {
-        MBEDTLS_SSL_PROC_CHK( mbedtls_mps_read_handshake( &ssl->mps->l4, &msg ) );
-
-        if( msg.type == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "got a certificate request" ) );
-            return( SSL_CERTIFICATE_REQUEST_EXPECT_REQUEST );
-        }
-    }
-
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got no certificate request" ) );
-
-    return( SSL_CERTIFICATE_REQUEST_SKIP );
-
-cleanup:
-    return( ret);
-}
-#else /* MBEDTLS_SSL_USE_MPS */
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_certificate_request_coordinate(mbedtls_ssl_context *ssl)
 {
@@ -2681,7 +2623,6 @@ static int ssl_tls13_certificate_request_coordinate(mbedtls_ssl_context *ssl)
 
     return SSL_CERTIFICATE_REQUEST_SKIP;
 }
-#endif /* MBEDTLS_SSL_USE_MPS */
 
 /*
  * ssl_tls13_parse_certificate_request()
@@ -3007,6 +2948,7 @@ static int ssl_tls13_flush_buffers(mbedtls_ssl_context *ssl)
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_handshake_wrapup(mbedtls_ssl_context *ssl)
 {
+
     mbedtls_ssl_tls13_handshake_wrapup(ssl);
 
     mbedtls_ssl_handshake_set_state(ssl, MBEDTLS_SSL_HANDSHAKE_OVER);
