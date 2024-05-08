@@ -1345,36 +1345,6 @@ static int ssl_tls13_write_change_cipher_spec_coordinate( mbedtls_ssl_context *s
 }
 
 MBEDTLS_CHECK_RETURN_CRITICAL
-static int ssl_tls13_finalize_change_cipher_spec( mbedtls_ssl_context *ssl )
-{
-    (void) ssl;
-
-#if defined(MBEDTLS_SSL_SRV_C)
-    if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
-    {
-        switch( ssl->state )
-        {
-            case MBEDTLS_SSL_SERVER_CCS_AFTER_SERVER_HELLO:
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_ENCRYPTED_EXTENSIONS );
-                ssl->handshake->ccs_sent++;
-                break;
-
-            case MBEDTLS_SSL_SERVER_CCS_AFTER_HELLO_RETRY_REQUEST:
-                mbedtls_ssl_handshake_set_state( ssl, MBEDTLS_SSL_SECOND_CLIENT_HELLO );
-                ssl->handshake->ccs_sent++;
-                break;
-
-            default:
-                MBEDTLS_SSL_DEBUG_MSG( 1, ( "should never happen" ) );
-                return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
-        }
-    }
-#endif /* MBEDTLS_SSL_SRV_C */
-
-    return( 0 );
-}
-
-MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_change_cipher_spec_body(mbedtls_ssl_context *ssl,
                                                    unsigned char *buf,
                                                    unsigned char *end,
@@ -1410,8 +1380,6 @@ int mbedtls_ssl_tls13_write_change_cipher_spec(mbedtls_ssl_context *ssl)
         /* Dispatch message */
         MBEDTLS_SSL_PROC_CHK( mbedtls_ssl_write_record( ssl, 0 ) );
     }
-
-    MBEDTLS_SSL_PROC_CHK( ssl_tls13_finalize_change_cipher_spec( ssl ) );
 
 cleanup:
 
