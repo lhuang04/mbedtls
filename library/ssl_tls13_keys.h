@@ -553,9 +553,6 @@ int mbedtls_ssl_tls13_populate_transform(mbedtls_ssl_transform *transform,
 MBEDTLS_CHECK_RETURN_CRITICAL
 int mbedtls_ssl_tls13_key_schedule_stage_early(mbedtls_ssl_context *ssl);
 
-int mbedtls_ssl_tls13_generate_early_data_keys(
-    mbedtls_ssl_context *ssl, mbedtls_ssl_key_set *traffic_keys );
-
 /**
  * \brief Compute TLS 1.3 resumption master secret.
  *
