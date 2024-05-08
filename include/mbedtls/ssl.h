@@ -526,10 +526,7 @@
 #define MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION     100  /* 0x64 */
 #define MBEDTLS_SSL_ALERT_MSG_MISSING_EXTENSION    109  /* 0x6d -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT      110  /* 0x6E */
-#define MBEDTLS_SSL_ALERT_MSG_CERT_UNOBTAINABLE          111  /* 0x6f -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME    112  /* 0x70 */
-#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_STATUS_RESPONSE   113  /* 0x71 -- new in TLS 1.3 */
-#define MBEDTLS_SSL_ALERT_MSG_BAD_CERT_HASH_VALUE        114  /* 0x72 -- new in TLS 1.3 */
 #define MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY 115  /* 0x73 */
 #define MBEDTLS_SSL_ALERT_MSG_CERT_REQUIRED        116  /* 0x74 */
 #define MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL 120 /* 0x78 */
@@ -830,12 +827,6 @@ typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
      MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_EARLY_DATA)
 int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
-typedef enum
-{
-    allow_early_data = 1,
-    allow_dhe_resumption = 2,
-    allow_psk_resumption = 4,
-} mbedtls_ssl_ticket_flags;
 
 /**
  * \brief          Callback type: server-side session cache getter
