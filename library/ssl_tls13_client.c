@@ -2298,6 +2298,18 @@ cleanup:
 
 }
 
+/*
+ * Handler for MBEDTLS_SSL_END_OF_EARLY_DATA
+ *
+ * RFC 8446 section 4.5
+ *
+ * struct {} EndOfEarlyData;
+ *
+ * If the server sent an "early_data" extension in EncryptedExtensions, the
+ * client MUST send an EndOfEarlyData message after receiving the server
+ * Finished. Otherwise, the client MUST NOT send an EndOfEarlyData message.
+ */
+
 MBEDTLS_CHECK_RETURN_CRITICAL
 static int ssl_tls13_write_end_of_early_data(mbedtls_ssl_context *ssl)
 {
