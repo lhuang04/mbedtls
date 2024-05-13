@@ -333,6 +333,9 @@
 #define MBEDTLS_SSL_EARLY_DATA_DISABLED        0
 #define MBEDTLS_SSL_EARLY_DATA_ENABLED         1
 
+#define MBEDTLS_SSL_EARLY_DATA_OFF        0
+#define MBEDTLS_SSL_EARLY_DATA_ON         1
+
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_UNSUPPORTED    0
 #define MBEDTLS_SSL_DTLS_SRTP_MKI_SUPPORTED      1
 
@@ -886,6 +889,7 @@ typedef struct mbedtls_ssl_flight_item mbedtls_ssl_flight_item;
     (MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_PSK_RESUMPTION             |      \
      MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_PSK_EPHEMERAL_RESUMPTION   |      \
      MBEDTLS_SSL_TLS1_3_TICKET_ALLOW_EARLY_DATA)
+int mbedtls_ssl_get_early_data_status( mbedtls_ssl_context *ssl );
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_SESSION_TICKETS */
 
 /**
@@ -1293,6 +1297,9 @@ struct mbedtls_ssl_session {
      */
     mbedtls_ms_time_t MBEDTLS_PRIVATE(ticket_creation_time);
 #endif
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_EARLY_DATA)
+    uint32_t MBEDTLS_PRIVATE(max_early_data_size);   /*!< max data allowed */
+#endif /*  MBEDTLS_SSL_PROTO_TLS1_3 && MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3) && defined(MBEDTLS_SSL_SESSION_TICKETS)
     uint32_t MBEDTLS_PRIVATE(ticket_age_add);     /*!< Randomly generated value used to obscure the age of the ticket */
@@ -4712,6 +4719,18 @@ int mbedtls_ssl_get_ciphersuite_id_from_ssl(const mbedtls_ssl_context *ssl);
  */
 const char *mbedtls_ssl_get_ciphersuite(const mbedtls_ssl_context *ssl);
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+/**
+* \brief          Return the negotiated key exchange mode id
+*
+* \param ssl      SSL context
+*
+* \return         mbedtls_key_exchange_type_t
+*/
+mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange(const mbedtls_ssl_context* ssl);
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 /**
  * \brief          Return the (D)TLS protocol version negotiated in the
