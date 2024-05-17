@@ -4532,6 +4532,18 @@ int mbedtls_ssl_get_ciphersuite_id_from_ssl(const mbedtls_ssl_context *ssl);
  */
 const char *mbedtls_ssl_get_ciphersuite(const mbedtls_ssl_context *ssl);
 
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+
+/**
+* \brief          Return the negotiated key exchange mode id
+*
+* \param ssl      SSL context
+*
+* \return         mbedtls_key_exchange_type_t
+*/
+mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange(const mbedtls_ssl_context* ssl);
+
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 /**
  * \brief          Return the (D)TLS protocol version negotiated in the
