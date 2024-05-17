@@ -2216,7 +2216,7 @@ int mbedtls_ssl_conf_psk(mbedtls_ssl_config *conf,
     return ret;
 }
 
-static void ssl_remove_psk(mbedtls_ssl_context *ssl)
+void ssl_remove_psk(mbedtls_ssl_context* ssl)
 {
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if (!mbedtls_svc_key_id_is_null(ssl->handshake->psk_opaque)) {
@@ -2233,6 +2233,7 @@ static void ssl_remove_psk(mbedtls_ssl_context *ssl)
         mbedtls_zeroize_and_free(ssl->handshake->psk,
                                  ssl->handshake->psk_len);
         ssl->handshake->psk_len = 0;
+        ssl->handshake->psk = NULL;
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 }
@@ -3106,6 +3107,16 @@ const char *mbedtls_ssl_get_ciphersuite(const mbedtls_ssl_context *ssl)
 
     return mbedtls_ssl_get_ciphersuite_name(ssl->session->ciphersuite);
 }
+
+#if defined(MBEDTLS_SSL_PROTO_TLS1_3)
+mbedtls_key_exchange_type_t mbedtls_ssl_get_key_exchange( const mbedtls_ssl_context* ssl )
+{
+    if( ssl == NULL || ssl->session == NULL )
+        return( MBEDTLS_KEY_EXCHANGE_NONE );
+
+    return ( ssl->handshake->key_exchange_mode );
+}
+#endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
 
 const char *mbedtls_ssl_get_version(const mbedtls_ssl_context *ssl)
 {
