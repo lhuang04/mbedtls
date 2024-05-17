@@ -1880,6 +1880,7 @@ static int ssl_tls13_postprocess_server_hello(mbedtls_ssl_context *ssl)
         case MBEDTLS_SSL_EXT_MASK(KEY_SHARE):
             handshake->key_exchange_mode =
                 MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL;
+            ssl_remove_psk(ssl);
             break;
 
         /* Both the pre_shared_key and key_share extensions were received */
@@ -2341,6 +2342,13 @@ int mbedtls_ssl_get_early_data_status(mbedtls_ssl_context *ssl)
         default:
             return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     }
+}
+
+int mbedtls_ssl_can_write_early_data(mbedtls_ssl_context *ssl)
+{
+    return ssl->early_data_state == MBEDTLS_SSL_EARLY_DATA_STATE_IND_SENT
+      || ssl->early_data_state == MBEDTLS_SSL_EARLY_DATA_STATE_CAN_WRITE
+      || ssl->early_data_state == MBEDTLS_SSL_EARLY_DATA_STATE_ACCEPTED; 
 }
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 
