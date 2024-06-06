@@ -5380,6 +5380,7 @@ int mbedtls_ssl_write_early_data(mbedtls_ssl_context *ssl,
  *
  */
 int mbedtls_ssl_get_early_data_status(mbedtls_ssl_context *ssl);
+int mbedtls_ssl_can_write_early_data(mbedtls_ssl_context *ssl);
 #endif /* MBEDTLS_SSL_CLI_C */
 
 #endif /* MBEDTLS_SSL_EARLY_DATA */

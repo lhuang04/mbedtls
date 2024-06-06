@@ -2342,6 +2342,13 @@ int mbedtls_ssl_get_early_data_status(mbedtls_ssl_context *ssl)
             return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     }
 }
+
+int mbedtls_ssl_can_write_early_data(mbedtls_ssl_context *ssl)
+{
+    return ssl->early_data_state == MBEDTLS_SSL_EARLY_DATA_STATE_IND_SENT
+      || ssl->early_data_state == MBEDTLS_SSL_EARLY_DATA_STATE_CAN_WRITE
+      || ssl->early_data_state == MBEDTLS_SSL_EARLY_DATA_STATE_ACCEPTED; 
+}
 #endif /* MBEDTLS_SSL_EARLY_DATA */
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED)
