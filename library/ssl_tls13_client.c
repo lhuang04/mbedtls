@@ -1880,6 +1880,7 @@ static int ssl_tls13_postprocess_server_hello(mbedtls_ssl_context *ssl)
         case MBEDTLS_SSL_EXT_MASK(KEY_SHARE):
             handshake->key_exchange_mode =
                 MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL;
+            ssl_remove_psk(ssl);
             break;
 
         /* Both the pre_shared_key and key_share extensions were received */
