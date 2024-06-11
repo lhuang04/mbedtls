@@ -2234,6 +2234,7 @@ static void ssl_remove_psk(mbedtls_ssl_context *ssl)
         mbedtls_zeroize_and_free(ssl->handshake->psk,
                                  ssl->handshake->psk_len);
         ssl->handshake->psk_len = 0;
+        ssl->handshake->psk = NULL;
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 }
